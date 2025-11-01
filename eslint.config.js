@@ -1,40 +1,50 @@
-import globals from 'globals';
-import tseslint from 'typescript-eslint';
-import eslint from '@eslint/js';
-import eslintConfigPrettier from 'eslint-config-prettier';
-import eslintPluginPrettier from 'eslint-plugin-prettier';
+const globals = require('globals');
+const pluginJs = require('@eslint/js');
+const tseslint = require('typescript-eslint');
 
-export default tseslint.config(
-  eslint.configs.recommended,
-  ...tseslint.configs.strict,
-  {
-    ignores: ['**/*.cjs'],
-  },
-  {
-    files: ['**/*.ts'],
-    languageOptions: {
-      parser: tseslint.parser,
-      parserOptions: {
-        project: true,
-        tsconfigRootDir: import.meta.dirname,
-      },
-      globals: {
-        ...globals.node,
-      },
+module.exports = [
+    {
+        ignores: ['dist/**'],
     },
-    plugins: {
-      '@typescript-eslint': tseslint.plugin,
-      prettier: eslintPluginPrettier,
+    {
+        files: ['**/*.ts'],
+        languageOptions: {
+            globals: {
+                ...globals.node,
+            },
+            parser: tseslint.parser,
+            parserOptions: {
+                project: './tsconfig.json',
+            },
+        },
+        plugins: {
+            '@typescript-eslint': tseslint.plugin,
+        },
+        rules: {
+            ...pluginJs.configs.recommended.rules,
+            ...tseslint.configs.recommended.rules,
+            '@typescript-eslint/no-explicit-any': 'off',
+            '@typescript-eslint/no-unused-vars': 'off',
+            '@typescript-eslint/no-namespace': 'off',
+            '@typescript-eslint/explicit-function-return-type': [
+                'warn',
+                {
+                    allowExpressions: true,
+                },
+            ],
+            '@typescript-eslint/consistent-type-imports': [
+                'error',
+                {
+                    prefer: 'type-imports',
+                },
+            ],
+            'no-console': 'warn',
+            'lines-between-class-members': ['error', 'always'],
+            'padding-line-between-statements': [
+                'error',
+                { blankLine: 'always', prev: 'class', next: '*' },
+                { blankLine: 'always', prev: '*', next: 'class' },
+            ],
+        },
     },
-    rules: {
-      ...eslintConfigPrettier.rules,
-      'prettier/prettier': 'error',
-      '@typescript-eslint/no-unused-vars': [
-        'warn',
-        { argsIgnorePattern: '^_' },
-      ],
-      '@typescript-eslint/explicit-function-return-type': 'warn',
-      '@typescript-eslint/no-explicit-any': 'warn',
-    },
-  },
-);
+];
