@@ -23,6 +23,13 @@ module.exports = [
         rules: {
             ...pluginJs.configs.recommended.rules,
             ...tseslint.configs.recommended.rules,
+            'no-unused-vars': [
+                'warn',
+                {
+                    argsIgnorePattern: '^_',
+                    varsIgnorePattern: '^_',
+                },
+            ],
             '@typescript-eslint/no-explicit-any': 'off',
             '@typescript-eslint/no-unused-vars': 'off',
             '@typescript-eslint/no-namespace': 'off',
