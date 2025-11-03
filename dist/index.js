@@ -17,6 +17,7 @@ const express_session_1 = __importDefault(require("express-session"));
 const passport_1 = __importDefault(require("passport"));
 const notFound_1 = __importDefault(require("./routes/notFound"));
 const connect_mongo_1 = __importDefault(require("connect-mongo"));
+const redis_1 = require("./config/redis");
 (0, globalErrorHandlers_1.default)();
 const app = (0, express_1.default)();
 app.use((0, morgan_1.default)('dev'));
@@ -47,6 +48,7 @@ app.use(notFound_1.default);
 app.use(errorHandler_1.default);
 async function bootstrap() {
     await (0, db_1.default)();
+    await (0, redis_1.connectRedis)();
     app.listen(index_2.default.port, () => {
         logger_1.default.info(`Server is running on port ${index_2.default.port}`);
     });

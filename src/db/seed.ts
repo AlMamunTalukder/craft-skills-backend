@@ -1,31 +1,31 @@
-import AppError from 'src/errors/AppError';
-import httpStatus from 'http-status';
 import bcrypt from 'bcrypt';
+import httpStatus from 'http-status';
+import AppError from 'src/errors/AppError';
 import User from 'src/modules/user/user.model';
-import { IUserRole } from 'src/modules/user/user.interface';
-import logger from 'src/shared/logger';
 import connectDB from 'src/shared/db';
-
-const ADMIN = {
-    firstName: 'Admin',
-    lastName: 'User',
-    email: 'admin@example.com',
-    phone: '1234567890',
-    password: 'Admin123',
-    role: IUserRole._ADMIN,
-};
+import logger from 'src/shared/logger';
+import { ADMIN_DATA, SITE_DATA } from './data';
+import Site from 'src/modules/site/site.model';
 
 const seed = async (): Promise<void> => {
     try {
         await connectDB();
 
-        const isAdminExist = await User.findOne({ email: ADMIN.email });
+        const isAdminExist = await User.findOne({ email: ADMIN_DATA.email });
         if (isAdminExist) {
             logger.info('Admin already exists');
         } else {
-            const hashedPassword = await bcrypt.hash(ADMIN.password, 10);
-            await User.create({ ...ADMIN, password: hashedPassword });
+            const hashedPassword = await bcrypt.hash(ADMIN_DATA.password, 10);
+            await User.create({ ...ADMIN_DATA, password: hashedPassword });
             logger.info('Admin created');
+        }
+
+        const conteCount = await Site.countDocuments();
+        if (conteCount === 0) {
+            await Site.create(SITE_DATA);
+            logger.info('Site data created');
+        } else {
+            logger.info('Site data already exists');
         }
 
         logger.info('Database seeding completed');

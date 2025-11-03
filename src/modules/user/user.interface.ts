@@ -1,4 +1,5 @@
 import type { Document } from 'mongoose';
+import type { ObjectId } from 'mongodb';
 
 export enum IUserRole {
     _STUDENT = 'student',
@@ -13,7 +14,7 @@ export enum IUserStatus {
 }
 
 export interface IUser extends Document {
-    _id: string;
+    _id: string | ObjectId;
     firstName: string;
     lastName: string;
     email?: string;

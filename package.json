@@ -26,6 +26,7 @@
     "homepage": "https://github.com/AlMamunTalukder/craft-skills-backend#readme",
     "dependencies": {
         "bcrypt": "^6.0.0",
+        "cloudinary": "^2.8.0",
         "connect-mongo": "^5.1.0",
         "cors": "^2.8.5",
         "dotenv": "^17.2.3",
@@ -35,8 +36,10 @@
         "lodash": "^4.17.21",
         "mongoose": "^8.19.2",
         "morgan": "^1.10.1",
+        "multer": "^2.0.2",
         "passport": "^0.7.0",
         "passport-local": "^1.0.0",
+        "redis": "^5.9.0",
         "uuid": "^13.0.0",
         "winston": "^3.18.3",
         "zod": "^4.1.12"
@@ -49,6 +52,7 @@
         "@types/express-session": "^1.18.2",
         "@types/lodash": "^4.17.20",
         "@types/morgan": "^1.9.10",
+        "@types/multer": "^2.0.0",
         "@types/node": "^24.9.2",
         "@types/passport": "^1.0.17",
         "@types/passport-local": "^1.0.38",

@@ -5,8 +5,12 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
 Object.defineProperty(exports, "__esModule", { value: true });
 const express_1 = require("express");
 const auth_routes_1 = __importDefault(require("../modules/auth/auth.routes"));
+const gallery_routes_1 = __importDefault(require("../modules/gallery/gallery.routes"));
+const site_routes_1 = __importDefault(require("../modules/site/site.routes"));
 const user_routes_1 = __importDefault(require("../modules/user/user.routes"));
 const router = (0, express_1.Router)();
 router.use('/auth', auth_routes_1.default);
 router.use('/users', user_routes_1.default);
+router.use('/site', site_routes_1.default);
+router.use('/gallery', gallery_routes_1.default);
 exports.default = router;

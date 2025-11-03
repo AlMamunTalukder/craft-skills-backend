@@ -6,7 +6,7 @@ import userService from './user.service';
 
 const profile = catchAsync(async (req: Request, res: Response): Promise<void> => {
     const user = req.user as IUser;
-    const result = await userService.findUserById(user._id);
+    const result = await userService.findUserById(user._id.toString());
     sendResponse(res, {
         statusCode: 200,
         success: true,
@@ -38,7 +38,7 @@ const updateUser = catchAsync(async (req: Request, res: Response): Promise<void>
 
 const updateProfile = catchAsync(async (req: Request, res: Response): Promise<void> => {
     const user = req.user as IUser;
-    const result = await userService.updateUser(user._id, req.body);
+    const result = await userService.updateUser(user._id.toString(), req.body);
     sendResponse(res, {
         statusCode: 200,
         success: true,

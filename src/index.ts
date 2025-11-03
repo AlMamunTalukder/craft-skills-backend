@@ -13,6 +13,7 @@ import session from 'express-session';
 import passport from 'passport';
 import notFound from '@/routes/notFound';
 import MongoStore from 'connect-mongo';
+import { connectRedis } from '@/config/redis';
 
 setupGlobalErrorHandlers();
 
@@ -56,6 +57,7 @@ app.use(errorHandler);
 
 async function bootstrap(): Promise<void> {
     await connectDB();
+    await connectRedis();
     app.listen(config.port, () => {
         logger.info(`Server is running on port ${config.port}`);
     });
