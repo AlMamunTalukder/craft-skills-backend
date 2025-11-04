@@ -21,7 +21,11 @@ const redis_1 = require("./config/redis");
 (0, globalErrorHandlers_1.default)();
 const app = (0, express_1.default)();
 app.use((0, morgan_1.default)('dev'));
-app.use((0, cors_1.default)());
+app.use((0, cors_1.default)({
+    origin: ['http://localhost:3000', 'http://localhost:5173'],
+    methods: 'GET,HEAD,PUT,PATCH,POST,DELETE',
+    credentials: true,
+}));
 app.use(requestLogger_1.default);
 app.use(express_1.default.json());
 app.use(express_1.default.urlencoded({ extended: true }));
