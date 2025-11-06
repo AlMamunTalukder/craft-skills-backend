@@ -31,9 +31,17 @@ const createImage = async (req: Request): Promise<IGallery[] | null> => {
     return createdImages;
 };
 
-const getAllImages = async (): Promise<IGallery[]> => {
-    const images = await Gallery.find().sort({ createdAt: -1 });
-    return images;
+const getAllImages = async (
+    page = 1,
+    limit = 30,
+): Promise<{ images: IGallery[]; totalPages: number }> => {
+    const skip = (page - 1) * limit;
+    const total = await Gallery.countDocuments();
+    const images = await Gallery.find().sort({ createdAt: -1 }).skip(skip).limit(limit);
+
+    const totalPages = Math.ceil(total / limit);
+
+    return { images, totalPages };
 };
 
 const deleteImage = async (id: string): Promise<IGallery | null> => {

@@ -3,13 +3,16 @@ import galleryService from './gallery.service';
 import sendResponse from 'src/utils/sendResponse';
 
 const getAllImages = catchAsync(async (req, res) => {
-    const images = await galleryService.getAllImages();
+    const page = parseInt(req.query.page as string) || 1;
+    const limit = parseInt(req.query.limit as string) || 30;
+
+    const { images, totalPages } = await galleryService.getAllImages(page, limit);
 
     sendResponse(res, {
         statusCode: 200,
         success: true,
         message: 'Images retrieved successfully',
-        data: images,
+        data: { images, totalPages },
     });
 });
 
