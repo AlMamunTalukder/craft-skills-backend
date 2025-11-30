@@ -6,6 +6,9 @@ export interface ISite extends Document {
     name: string;
     logoHeader: string;
     logoFooter: string;
+    // ADD THESE:
+    logoLight: string;
+    logoDark: string;
     tagline: string;
     address: string;
     phone1: string;
@@ -17,6 +20,13 @@ export interface ISite extends Document {
     youtube?: string;
     telegram?: string;
     instagram?: string;
+
+    // ADD THESE STATISTICS FIELDS:
+    totalsTeachers?: number;
+    totalCourses?: number;
+    totalBatches?: number;
+    successRate?: number;
+
     homeBannerInfo: {
         title: string;
         subtitle: string;

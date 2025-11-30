@@ -6,6 +6,9 @@ const siteSchema = new Schema<ISite>(
         name: { type: String, required: true },
         logoHeader: { type: String, required: true },
         logoFooter: { type: String, required: true },
+        // ADD THESE:
+        logoLight: { type: String, required: true },
+        logoDark: { type: String, required: true },
         tagline: { type: String, required: true },
         address: { type: String, required: true },
         phone1: { type: String, required: true },
@@ -17,6 +20,12 @@ const siteSchema = new Schema<ISite>(
         youtube: { type: String },
         telegram: { type: String },
         instagram: { type: String },
+
+        // ADD THESE STATISTICS FIELDS:
+        totalsTeachers: { type: Number, default: 0 },
+        totalCourses: { type: Number, default: 0 },
+        totalBatches: { type: Number, default: 0 },
+        successRate: { type: Number, default: 0 },
 
         homeBannerInfo: {
             title: { type: String, required: true },

@@ -21,8 +21,17 @@ const getSiteData = async (): Promise<ISite | null> => {
     return siteData;
 };
 
+// In your site.service.ts - updateSiteData function
 const updateSiteData = async (data: SiteDto): Promise<ISite | null> => {
+    // console.log('=== UPDATE SITE DATA SERVICE ===');
+    // console.log('Received data keys:', Object.keys(data));
+    // console.log('Logo Light in data:', data.logoLight);
+    // console.log('Logo Dark in data:', data.logoDark);
+    // console.log('Full data:', data);
+
     const updatedSite = await Site.findOneAndUpdate({}, data, { new: true });
+
+    console.log('Updated site:', updatedSite);
 
     if (updatedSite) {
         await redisClient.set(CACHE_KEY, JSON.stringify(updatedSite));

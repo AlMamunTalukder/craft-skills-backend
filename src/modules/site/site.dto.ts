@@ -4,6 +4,9 @@ export const siteDto = z.object({
     name: z.string(),
     logoHeader: z.string(),
     logoFooter: z.string(),
+    // ADD THESE TWO LINES:
+    logoLight: z.string(),
+    logoDark: z.string(),
     tagline: z.string(),
     address: z.string(),
     phone1: z.string(),
@@ -38,6 +41,12 @@ export const siteDto = z.object({
     admissionHeaderTitle: z.string().optional(),
     admissionHeaderDescription: z.string().optional(),
     admissionDeadline: z.coerce.date().optional(),
+
+    // ADD THESE STATISTICS FIELDS TOO:
+    totalsTeachers: z.number().optional(),
+    totalCourses: z.number().optional(),
+    totalBatches: z.number().optional(),
+    successRate: z.number().optional(),
 });
 
 export type SiteDto = z.infer<typeof siteDto>;
