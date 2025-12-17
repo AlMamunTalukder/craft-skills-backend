@@ -1,6 +1,7 @@
 import type { Request, Response } from 'express';
 import { ScheduleService } from './schedule.service';
 import { scheduleDto } from './schedule.dto';
+import { Schedule } from './schedule.model';
 
 export const createSchedule = async (req: Request, res: Response) => {
     const validatedData = scheduleDto.parse(req.body);
@@ -30,5 +31,35 @@ export const updateSchedule = async (req: Request, res: Response) => {
         success: true,
         message: 'Schedule updated successfully',
         data: result,
+    });
+};
+
+export const bulkUpdateSchedules = async (req: Request, res: Response) => {
+    const schedules = req.body;
+
+    if (!Array.isArray(schedules)) {
+        return res.status(400).json({
+            success: false,
+            message: 'Payload must be an array',
+        });
+    }
+
+    const operations = schedules.map((item) => ({
+        updateOne: {
+            filter: { _id: item._id },
+            update: {
+                className: item.className,
+                days: item.days,
+                time: item.time,
+                holidays: item.holidays,
+            },
+        },
+    }));
+
+    await Schedule.bulkWrite(operations);
+
+    res.json({
+        success: true,
+        message: 'Class schedule updated successfully',
     });
 };

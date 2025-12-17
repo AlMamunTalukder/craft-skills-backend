@@ -1,86 +1,101 @@
+// server/controllers/seminar.controller.ts
 import type { Request, Response } from 'express';
-import catchAsync from '../../utils/catchAsync';
-import sendResponse from '../../utils/sendResponse';
-import seminarService from './seminar.service';
+import catchAsync from 'src/utils/catchAsync';
+import { seminarService } from './seminar.service';
 
-const createSeminar = catchAsync(async (req: Request, res: Response) => {
-    const seminar = await seminarService.createSeminar(req.body);
-    sendResponse(res, {
-        statusCode: 201,
-        success: true,
-        message: 'Seminar created successfully',
-        data: seminar,
-    });
-});
+export const seminarController = {
+    // Get all seminars
+    getAllSeminars: catchAsync(async (req: Request, res: Response) => {
+        console.time('getAllSeminarsController');
 
-const getAllSeminars = catchAsync(async (req: Request, res: Response) => {
-    const seminars = await seminarService.getAllSeminars();
-    sendResponse(res, {
-        statusCode: 200,
-        success: true,
-        message: 'Seminars retrieved successfully',
-        data: seminars,
-    });
-});
+        const seminars = await seminarService.getAllSeminars();
 
-const getSeminarById = catchAsync(async (req: Request, res: Response) => {
-    const seminar = await seminarService.getSeminarById(req.params.id);
-    sendResponse(res, {
-        statusCode: 200,
-        success: true,
-        message: 'Seminar retrieved successfully',
-        data: seminar,
-    });
-});
+        // Cache control headers
+        res.set({
+            'Cache-Control': 'public, max-age=60',
+        });
 
-const updateSeminar = catchAsync(async (req: Request, res: Response) => {
-    const seminar = await seminarService.updateSeminar(req.params.id, req.body);
-    sendResponse(res, {
-        statusCode: 200,
-        success: true,
-        message: 'Seminar updated successfully',
-        data: seminar,
-    });
-});
+        console.timeEnd('getAllSeminarsController');
+        console.log(`🚀 Sent ${seminars.length} seminars`);
 
-const deleteSeminar = catchAsync(async (req: Request, res: Response) => {
-    await seminarService.deleteSeminar(req.params.id);
-    sendResponse(res, {
-        statusCode: 200,
-        success: true,
-        message: 'Seminar deleted successfully',
-        data: null,
-    });
-});
+        res.status(200).json({
+            success: true,
+            message: 'Seminars retrieved successfully',
+            data: seminars,
+            count: seminars.length,
+        });
+    }),
 
-const changeStatus = catchAsync(async (req: Request, res: Response) => {
-    const seminar = await seminarService.changeStatus(req.params.id, req.body.isActive);
-    sendResponse(res, {
-        statusCode: 200,
-        success: true,
-        message: 'Seminar status updated successfully',
-        data: seminar,
-    });
-});
+    // Get single seminar
+    getSeminarById: catchAsync(async (req: Request, res: Response) => {
+        const { id } = req.params;
 
-const registerParticipant = catchAsync(async (req: Request, res: Response) => {
-    const participant = await seminarService.registerParticipant(req.body);
-    sendResponse(res, {
-        statusCode: 201,
-        success: true,
-        message: 'Participant registered successfully',
-        data: participant,
-    });
-});
+        console.time('getSeminarByIdController');
+        const seminar = await seminarService.getSeminarById(id);
+        console.timeEnd('getSeminarByIdController');
 
-const seminarController = {
-    createSeminar,
-    getAllSeminars,
-    getSeminarById,
-    updateSeminar,
-    deleteSeminar,
-    registerParticipant,
-    changeStatus,
+        res.status(200).json({
+            success: true,
+            message: 'Seminar retrieved successfully',
+            data: seminar,
+        });
+    }),
+
+    // Create seminar
+    createSeminar: catchAsync(async (req: Request, res: Response) => {
+        console.time('createSeminarController');
+        const seminar = await seminarService.createSeminar(req.body);
+        console.timeEnd('createSeminarController');
+
+        res.status(201).json({
+            success: true,
+            message: 'Seminar created successfully',
+            data: seminar,
+        });
+    }),
+
+    // Update seminar
+    updateSeminar: catchAsync(async (req: Request, res: Response) => {
+        const { id } = req.params;
+
+        console.time('updateSeminarController');
+        const seminar = await seminarService.updateSeminar(id, req.body);
+        console.timeEnd('updateSeminarController');
+
+        res.status(200).json({
+            success: true,
+            message: 'Seminar updated successfully',
+            data: seminar,
+        });
+    }),
+
+    // Delete seminar
+    deleteSeminar: catchAsync(async (req: Request, res: Response) => {
+        const { id } = req.params;
+
+        console.time('deleteSeminarController');
+        await seminarService.deleteSeminar(id);
+        console.timeEnd('deleteSeminarController');
+
+        res.status(200).json({
+            success: true,
+            message: 'Seminar deleted successfully',
+        });
+    }),
+
+    // Change status
+    changeStatus: catchAsync(async (req: Request, res: Response) => {
+        const { id } = req.params;
+        const { isActive } = req.body;
+
+        console.time('changeStatusController');
+        const seminar = await seminarService.changeStatus(id, isActive);
+        console.timeEnd('changeStatusController');
+
+        res.status(200).json({
+            success: true,
+            message: 'Seminar status updated successfully',
+            data: seminar,
+        });
+    }),
 };
-
-export default seminarController;
