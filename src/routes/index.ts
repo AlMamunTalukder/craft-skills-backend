@@ -6,6 +6,7 @@ import SiteRoutes from '../modules/site/site.routes';
 import UserRoutes from '../modules/user/user.routes';
 import uploadRoutes from '../modules/upload/upload.routes';
 import Schedulerouter from 'src/modules/schedule/schedule.routes';
+import { courseBatchRoutes } from 'src/modules/coursebatch/coursebatch.routes';
 
 const router = Router();
 
@@ -54,6 +55,10 @@ const moduleRoutes = [
     {
         path: '/seminars',
         route: SeminarRoutes,
+    },
+    {
+        path: '/course-batches',
+        route: courseBatchRoutes,
     },
     {
         path: '/upload',
