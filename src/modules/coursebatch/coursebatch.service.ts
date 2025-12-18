@@ -2,13 +2,21 @@
 import type { ICourseBatch } from './coursebatch.model';
 import { CourseBatch } from './coursebatch.model';
 
+// server/services/coursebatch.service.ts
 const getAllBatches = async (): Promise<ICourseBatch[]> => {
     const batches = await CourseBatch.find()
-        .select('name code description registrationStart registrationEnd isActive createdAt')
+        .select(
+            'name code description registrationStart registrationEnd isActive facebookSecretGroup messengerSecretGroup createdAt',
+        ) // Add fields here
         .sort({ createdAt: -1 })
-        .lean<ICourseBatch[]>(); // Add generic type here
+        .lean<ICourseBatch[]>();
 
-    return batches;
+    // Ensure all batches have the fields
+    return batches.map((batch) => ({
+        ...batch,
+        facebookSecretGroup: batch.facebookSecretGroup || '',
+        messengerSecretGroup: batch.messengerSecretGroup || '',
+    }));
 };
 
 const getBatchById = async (id: string): Promise<ICourseBatch> => {

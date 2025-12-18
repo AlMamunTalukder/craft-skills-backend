@@ -39,8 +39,14 @@ const CourseBatchSchema = new Schema<ICourseBatch>(
             type: Boolean,
             default: false,
         },
-        facebookSecretGroup: { type: String },
-        messengerSecretGroup: { type: String },
+        facebookSecretGroup: {
+            type: String,
+            default: '',
+        },
+        messengerSecretGroup: {
+            type: String,
+            default: '',
+        },
     },
     {
         timestamps: true,
