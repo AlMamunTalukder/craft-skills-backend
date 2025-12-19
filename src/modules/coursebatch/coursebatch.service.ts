@@ -1,70 +1,117 @@
 // server/services/coursebatch.service.ts
-import type { ICourseBatch } from './coursebatch.model';
+
+import type { CreateBatchDto, UpdateBatchDto } from './coursebatch.dto';
 import { CourseBatch } from './coursebatch.model';
 
-// server/services/coursebatch.service.ts
-const getAllBatches = async (): Promise<ICourseBatch[]> => {
+interface CourseBatchResponse {
+    _id: string;
+    name: string;
+    code: string;
+    description: string;
+    registrationStart: Date;
+    registrationEnd: Date;
+    isActive: boolean;
+    facebookSecretGroup: string;
+    messengerSecretGroup: string;
+    createdAt: Date;
+    updatedAt: Date;
+}
+
+const toResponseDto = (batch: any): CourseBatchResponse => ({
+    _id: batch._id.toString(),
+    name: batch.name,
+    code: batch.code,
+    description: batch.description || '',
+    registrationStart: batch.registrationStart,
+    registrationEnd: batch.registrationEnd,
+    isActive: batch.isActive,
+    facebookSecretGroup: batch.facebookSecretGroup || '',
+    messengerSecretGroup: batch.messengerSecretGroup || '',
+    createdAt: batch.createdAt,
+    updatedAt: batch.updatedAt,
+});
+
+// Get all batches
+const getAllBatches = async (): Promise<CourseBatchResponse[]> => {
     const batches = await CourseBatch.find()
         .select(
-            'name code description registrationStart registrationEnd isActive facebookSecretGroup messengerSecretGroup createdAt',
-        ) // Add fields here
+            'name code description registrationStart registrationEnd isActive facebookSecretGroup messengerSecretGroup createdAt updatedAt',
+        )
         .sort({ createdAt: -1 })
-        .lean<ICourseBatch[]>();
+        .lean();
 
-    // Ensure all batches have the fields
-    return batches.map((batch) => ({
-        ...batch,
-        facebookSecretGroup: batch.facebookSecretGroup || '',
-        messengerSecretGroup: batch.messengerSecretGroup || '',
-    }));
+    return batches.map(toResponseDto);
 };
 
-const getBatchById = async (id: string): Promise<ICourseBatch> => {
-    const batch = await CourseBatch.findById(id).lean<ICourseBatch>(); // Add generic type here
+// Get batch by ID
+const getBatchById = async (id: string): Promise<CourseBatchResponse> => {
+    const batch = await CourseBatch.findById(id).lean();
     if (!batch) throw new Error('Batch not found');
-    return batch;
+    return toResponseDto(batch);
 };
 
-const createBatch = async (batchData: Partial<ICourseBatch>): Promise<ICourseBatch> => {
+// Create new batch
+const createBatch = async (createDto: CreateBatchDto): Promise<CourseBatchResponse> => {
+    // Convert date strings to Date objects
+    const batchData = {
+        ...createDto,
+        registrationStart: new Date(createDto.registrationStart),
+        registrationEnd: new Date(createDto.registrationEnd),
+    };
+
     const batch = new CourseBatch(batchData);
-    return await batch.save();
+    const savedBatch = await batch.save();
+    return toResponseDto(savedBatch.toObject());
 };
 
-const updateBatch = async (id: string, batchData: Partial<ICourseBatch>): Promise<ICourseBatch> => {
-    const batch = await CourseBatch.findByIdAndUpdate(id, batchData, {
+// Update batch
+const updateBatch = async (id: string, updateDto: UpdateBatchDto): Promise<CourseBatchResponse> => {
+    // Convert date strings to Date objects if provided
+    const updateData: any = { ...updateDto };
+
+    if (updateDto.registrationStart) {
+        updateData.registrationStart = new Date(updateDto.registrationStart);
+    }
+
+    if (updateDto.registrationEnd) {
+        updateData.registrationEnd = new Date(updateDto.registrationEnd);
+    }
+
+    const batch = await CourseBatch.findByIdAndUpdate(id, updateData, {
         new: true,
         runValidators: true,
         lean: true,
-    }).lean<ICourseBatch>(); // Add generic type here
+    });
 
     if (!batch) throw new Error('Batch not found');
-    return batch;
+    return toResponseDto(batch);
 };
 
+// Delete batch
 const deleteBatch = async (id: string): Promise<void> => {
     const batch = await CourseBatch.findByIdAndDelete(id);
     if (!batch) throw new Error('Batch not found');
 };
 
-const changeStatus = async (id: string, isActive: boolean): Promise<ICourseBatch> => {
+// Change batch status
+const changeStatus = async (id: string, isActive: boolean): Promise<CourseBatchResponse> => {
     // If activating a batch, deactivate all others
     if (isActive) {
         await CourseBatch.updateMany({ _id: { $ne: id } }, { isActive: false });
     }
 
-    const batch = await CourseBatch.findByIdAndUpdate(
-        id,
-        { isActive },
-        { new: true, lean: true },
-    ).lean<ICourseBatch>(); // Add generic type here
+    const batch = await CourseBatch.findByIdAndUpdate(id, { isActive }, { new: true, lean: true });
 
     if (!batch) throw new Error('Batch not found');
-    return batch;
+    return toResponseDto(batch);
 };
 
-const getActiveBatch = async (): Promise<ICourseBatch | null> => {
-    const batch = await CourseBatch.findOne({ isActive: true }).lean<ICourseBatch>(); // Add generic type here
-    return batch;
+// Get active batch
+const getActiveBatch = async (): Promise<CourseBatchResponse | null> => {
+    const batch = await CourseBatch.findOne({ isActive: true }).lean();
+
+    if (!batch) return null;
+    return toResponseDto(batch);
 };
 
 export const courseBatchService = {
