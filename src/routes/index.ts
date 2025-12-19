@@ -8,6 +8,7 @@ import uploadRoutes from '../modules/upload/upload.routes';
 import Schedulerouter from 'src/modules/schedule/schedule.routes';
 import { courseBatchRoutes } from 'src/modules/coursebatch/coursebatch.routes';
 import { courseRoutes } from 'src/modules/course/course.routes';
+import { couponRoutes } from 'src/modules/coupon/coupon.routes';
 
 const router = Router();
 
@@ -64,6 +65,10 @@ const moduleRoutes = [
     {
         path: '/course-batches',
         route: courseBatchRoutes,
+    },
+    {
+        path: '/coupons',
+        route: couponRoutes,
     },
     {
         path: '/upload',
