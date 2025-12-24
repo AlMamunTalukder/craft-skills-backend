@@ -46,6 +46,7 @@ module.exports = [
                 },
             ],
             'no-console': 'warn',
+            'no-useless-escape': 'off',
             'lines-between-class-members': ['error', 'always'],
             'padding-line-between-statements': [
                 'error',

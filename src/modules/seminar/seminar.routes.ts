@@ -1,45 +1,8 @@
-// import { Router } from 'express';
-// import { auth } from '../../middleware/auth';
-// import validateRequest from '../../utils/validateRequest';
-// import seminarController from './seminar.controller';
-// import { createSeminarDto, updateSeminarDto, registerParticipantDto } from './seminar.dto';
-
-// const router = Router();
-
-// router.post(
-//     '/',
-//     auth(['admin']),
-//     validateRequest(createSeminarDto),
-//     seminarController.createSeminar,
-// );
-
-// router.get('/', seminarController.getAllSeminars);
-
-// router.get('/:id', seminarController.getSeminarById);
-
-// router.put(
-//     '/:id',
-//     auth(['admin']),
-//     validateRequest(updateSeminarDto),
-//     seminarController.updateSeminar,
-// );
-// router.put('/:id/status', auth(['admin']), seminarController.changeStatus);
-
-// router.delete('/:id', auth(['admin']), seminarController.deleteSeminar);
-
-// router.post(
-//     '/register',
-//     validateRequest(registerParticipantDto),
-//     seminarController.registerParticipant,
-// );
-
-// export const SeminarRoutes = router;
-
-// server/routes/seminar.route.ts
 import { Router } from 'express';
 import { createSeminarDto, updateSeminarDto } from './seminar.dto';
 import { seminarController } from './seminar.controller';
 import validateRequest from 'src/utils/validateRequest';
+import { participantController } from './participant.controller';
 // import { auth } from '../middleware/auth'; // COMMENT OUT FOR NOW
 
 const router = Router();
@@ -64,5 +27,6 @@ router.put(
 
 router.put('/:id/status', seminarController.changeStatus);
 router.delete('/:id', seminarController.deleteSeminar);
+router.post('/register', participantController.register);
 
 export const SeminarRoutes = router;

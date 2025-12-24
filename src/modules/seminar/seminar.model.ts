@@ -1,25 +1,49 @@
-// server/models/seminar.model.ts
 import { Schema, model, models } from 'mongoose';
-import type { Document, Types } from 'mongoose';
+import type { IParticipant, ISeminar } from './seminar.interface';
 
-export interface ISeminar extends Document {
-    sl?: string;
-    title: string;
-    description?: string;
-    date: Date;
-    registrationDeadline: Date;
-    isActive: boolean;
-    link?: string;
-    facebookSecretGroup?: string;
-    whatsappSecretGroup?: string;
-    messengerSecretGroup?: string;
-    facebookPublicGroup?: string;
-    whatsappPublicGroup?: string;
-    telegramGroup?: string;
-    participants?: Types.ObjectId[];
-    createdAt: Date;
-    updatedAt: Date;
-}
+const ParticipantSchema = new Schema<IParticipant>(
+    {
+        name: {
+            type: String,
+            required: true,
+            trim: true,
+        },
+        email: {
+            type: String,
+            trim: true,
+            lowercase: true,
+        },
+        phone: {
+            type: String,
+            trim: true,
+        },
+        whatsapp: {
+            type: String,
+            trim: true,
+        },
+        occupation: {
+            type: String,
+            trim: true,
+        },
+        address: {
+            type: String,
+            trim: true,
+        },
+        registeredAt: {
+            type: Date,
+            default: Date.now,
+        },
+        seminarId: {
+            type: Schema.Types.ObjectId,
+            ref: 'Seminar',
+            required: true,
+        },
+    },
+    {
+        collection: 'participants',
+        timestamps: false, // Prisma already handles registeredAt
+    },
+);
 
 const SeminarSchema = new Schema<ISeminar>(
     {
@@ -50,3 +74,5 @@ SeminarSchema.index({ date: 1 });
 SeminarSchema.index({ title: 'text', description: 'text' });
 
 export const Seminar = models.Seminar || model<ISeminar>('Seminar', SeminarSchema);
+export const Participant =
+    models.Participant || model<IParticipant>('Participant', ParticipantSchema);
