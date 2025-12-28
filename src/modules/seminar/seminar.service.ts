@@ -37,8 +37,10 @@ const createSeminar = async (seminarData: Partial<ISeminar>): Promise<ISeminar> 
 };
 
 const getSeminarById = async (id: string): Promise<ISeminar> => {
-    // Remove populate temporarily
-    const seminar = await Seminar.findById(id);
+    const seminar = await Seminar.findById(id).populate({
+        path: 'participants',
+        options: { sort: { registeredAt: -1 } },
+    });
 
     if (!seminar) {
         throw new AppError(404, 'Seminar not found');
