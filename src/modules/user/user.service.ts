@@ -109,7 +109,7 @@ const userService = {
 
     // New methods for user management
     getAllUsers,
-    getUserById, // Alias for findUserById
+    getUserById,
     deleteUser,
     updateUserStatus,
     resetUserPassword,
