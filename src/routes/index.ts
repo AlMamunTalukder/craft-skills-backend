@@ -10,6 +10,7 @@ import { courseBatchRoutes } from 'src/modules/coursebatch/coursebatch.routes';
 import { courseRoutes } from 'src/modules/course/course.routes';
 import { couponRoutes } from 'src/modules/coupon/coupon.routes';
 import { attendanceRoutes } from 'src/modules/attendance/attendance.routes';
+import { AdmissionRoutes } from 'src/modules/admission/admission.routes';
 
 const router = Router();
 
@@ -59,6 +60,11 @@ const moduleRoutes = [
         path: '/seminars',
         route: SeminarRoutes,
     },
+    {
+        path: '/admissions',
+        route: AdmissionRoutes,
+    },
+
     {
         path: '/courses',
         route: courseRoutes,

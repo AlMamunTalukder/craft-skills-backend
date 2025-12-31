@@ -1,11 +1,13 @@
+// server/routes/seminar.routes.ts
 import { Router } from 'express';
-import { createSeminarDto, updateSeminarDto } from './seminar.dto';
+import { createSeminarDto, updateSeminarDto, registerParticipantDto } from './seminar.dto';
 import { seminarController } from './seminar.controller';
 import validateRequest from 'src/utils/validateRequest';
 import { participantController } from './participant.controller';
-// import { auth } from '../middleware/auth'; // COMMENT OUT FOR NOW
 
 const router = Router();
+
+console.log('SeminarRoutes module loaded');
 
 // REMOVE auth middleware temporarily for testing
 router.post(
@@ -16,6 +18,7 @@ router.post(
 );
 
 router.get('/', seminarController.getAllSeminars);
+router.get('/active', seminarController.getActiveSeminar); // Add this route
 router.get('/:id', seminarController.getSeminarById);
 
 router.put(
@@ -27,6 +30,8 @@ router.put(
 
 router.put('/:id/status', seminarController.changeStatus);
 router.delete('/:id', seminarController.deleteSeminar);
-router.post('/register', participantController.register);
+router.post('/register', validateRequest(registerParticipantDto), participantController.register);
+
+console.log('Seminar routes registered');
 
 export const SeminarRoutes = router;
