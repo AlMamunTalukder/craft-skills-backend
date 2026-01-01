@@ -1,6 +1,6 @@
-// server/services/participant.service.ts
 import AppError from 'src/errors/AppError';
-import { Seminar, Participant } from '../seminar/seminar.model';
+import { Seminar } from '../seminar/seminar.model';
+import { participantQueue } from 'src/queues/participant.queue';
 
 const registerParticipant = async (data: any): Promise<{ message: string; participant: any }> => {
     try {
@@ -22,27 +22,19 @@ const registerParticipant = async (data: any): Promise<{ message: string; partic
             throw new AppError(400, 'Registration deadline has passed');
         }
 
-        // Create participant
-        const participant = new Participant({
-            ...participantData,
-            seminarId,
-            registeredAt: now,
+        // Add job to queue for processing
+        await participantQueue.add('register-participant', {
+            participantData: {
+                ...participantData,
+                seminarId,
+                registeredAt: now,
+            },
         });
 
-        await participant.save();
-
-        // Add participant to seminar's participants array
-        await Seminar.findByIdAndUpdate(seminarId, { $push: { participants: participant._id } });
-
         return {
-            message: 'Successfully registered for the seminar',
-            participant: {
-                id: participant._id,
-                name: participant.name,
-                email: participant.email,
-                phone: participant.phone,
-                whatsapp: participant.whatsapp,
-            },
+            message:
+                'Successfully registered for the seminar. Your registration is being processed.',
+            participant: participantData,
         };
     } catch (error: any) {
         if (error instanceof AppError) {

@@ -1,5 +1,10 @@
 import { Router } from 'express';
-import { bulkUpdateSchedules, createSchedule, getAllSchedules, updateSchedule } from './schedule.controller';
+import {
+    bulkUpdateSchedules,
+    createSchedule,
+    getAllSchedules,
+    updateSchedule,
+} from './schedule.controller';
 
 const Schedulerouter = Router();
 

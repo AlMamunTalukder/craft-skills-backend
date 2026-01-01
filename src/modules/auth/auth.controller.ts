@@ -40,14 +40,16 @@ const login = catchAsync((req: Request, res: Response, next: NextFunction): void
     })(req, res, next);
 });
 
-const logout = catchAsync((req: Request, res: Response, next: NextFunction): void => {
+const logout = catchAsync((req: Request, res: Response, next: NextFunction) => {
     req.logout((err) => {
         if (err) return next(err);
-        sendResponse(res, {
-            statusCode: 200,
-            success: true,
-            message: 'Logout successful',
-            data: null,
+
+        req.session.destroy(function (err) {
+            if (err) {
+                return next(err);
+            }
+            res.clearCookie('connect.sid'); // Example cookie name
+            res.redirect('/');
         });
     });
 });

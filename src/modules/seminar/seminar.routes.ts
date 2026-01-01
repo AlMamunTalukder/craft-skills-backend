@@ -1,4 +1,3 @@
-// server/routes/seminar.routes.ts
 import { Router } from 'express';
 import { createSeminarDto, updateSeminarDto, registerParticipantDto } from './seminar.dto';
 import { seminarController } from './seminar.controller';
@@ -6,8 +5,6 @@ import validateRequest from 'src/utils/validateRequest';
 import { participantController } from './participant.controller';
 
 const router = Router();
-
-console.log('SeminarRoutes module loaded');
 
 // REMOVE auth middleware temporarily for testing
 router.post(
@@ -31,7 +28,5 @@ router.put(
 router.put('/:id/status', seminarController.changeStatus);
 router.delete('/:id', seminarController.deleteSeminar);
 router.post('/register', validateRequest(registerParticipantDto), participantController.register);
-
-console.log('Seminar routes registered');
 
 export const SeminarRoutes = router;
