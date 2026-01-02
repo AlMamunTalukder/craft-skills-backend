@@ -5,6 +5,23 @@ import { createBatchDto, updateBatchDto } from './coursebatch.dto';
 import validateRequest from 'src/utils/validateRequest';
 
 export const courseBatchController = {
+    checkBatchExists: async (req: Request, res: Response) => {
+        try {
+            const { batchNumber } = req.params;
+            const batchExists = await courseBatchService.checkBatchExists(batchNumber);
+
+            res.json({
+                success: true,
+                exists: batchExists,
+            });
+        } catch (error: any) {
+            res.status(500).json({
+                success: false,
+                message: error.message,
+            });
+        }
+    },
+
     getAllBatches: async (req: Request, res: Response) => {
         try {
             const batches = await courseBatchService.getAllBatches();

@@ -114,6 +114,20 @@ const getActiveBatch = async (): Promise<CourseBatchResponse | null> => {
     return toResponseDto(batch);
 };
 
+const checkBatchExists = async (batchNumber: string): Promise<boolean> => {
+    try {
+        // Check by batch code or name
+        const batch = await CourseBatch.findOne({
+            $or: [{ code: batchNumber }, { name: batchNumber }],
+        }).lean();
+
+        return !!batch;
+    } catch (error: any) {
+        console.error('Error checking batch existence:', error);
+        return false;
+    }
+};
+
 export const courseBatchService = {
     getAllBatches,
     getBatchById,
@@ -122,4 +136,5 @@ export const courseBatchService = {
     deleteBatch,
     changeStatus,
     getActiveBatch,
+    checkBatchExists,
 };

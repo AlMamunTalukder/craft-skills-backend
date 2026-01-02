@@ -1,29 +1,14 @@
 import z from 'zod';
 
-export const phoneRegex = /^(\+880|880)?1[3-9]\d{8}$/;
+export const phoneRegex = /^(01[3-9]\d{8}|8801[3-9]\d{8}|\+8801[3-9]\d{8})$/;
 
 export const RegisterDto = z
     .object({
-        firstName: z
+        name: z
             .string({})
-            .min(1, 'First name is required')
-            .max(50, 'First name must not exceed 50 characters')
+            .min(1, 'Name is required')
+            .max(100, 'Name must not exceed 100 characters')
             .trim(),
-
-        lastName: z
-            .string({})
-            .min(1, 'Last name is required')
-            .max(50, 'Last name must not exceed 50 characters')
-            .trim(),
-
-        password: z
-            .string({})
-            .min(6, 'Password must be at least 6 characters')
-            .max(100, 'Password must not exceed 100 characters')
-            .regex(
-                /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)/,
-                'Password must contain at least one uppercase letter, one lowercase letter, and one number',
-            ),
 
         email: z
             .string()
@@ -35,28 +20,28 @@ export const RegisterDto = z
 
         phone: z
             .string()
-            .regex(phoneRegex, 'Invalid phone number format')
+            .regex(phoneRegex, 'Invalid Bangladesh phone number format')
             .trim()
             .optional()
             .or(z.literal('')),
+
+        password: z
+            .string({})
+            .min(6, 'Password must be at least 6 characters')
+            .max(100, 'Password must not exceed 100 characters'),
+
+        batchNumber: z.string({}).min(1, 'Batch number is required').trim(),
     })
     .refine((data) => data.email || data.phone, {
         message: 'Either email or phone number must be provided',
         path: ['email'],
     })
-    .refine(
-        (data) => {
-            if (data.email && data.email.trim() === '') return false;
-            if (data.phone && data.phone.trim() === '') return false;
-            return true;
-        },
-        {
-            message: 'Email or phone cannot be empty',
-            path: ['email'],
-        },
-    );
+    .refine((data) => !(data.email && data.phone), {
+        message: 'Please provide either email OR phone, not both',
+        path: ['email'],
+    });
 
-enum WebsiteEnum {
+export enum WebsiteEnum {
     _ADMIN = 'admin',
     _CLIENT = 'client',
 }
@@ -77,7 +62,7 @@ export const LoginDto = z
             return isEmail || isPhone;
         },
         {
-            message: 'Please provide a valid email or phone number',
+            message: 'Please provide a valid email or Bangladesh phone number',
             path: ['identifier'],
         },
     );
