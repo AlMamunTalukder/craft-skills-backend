@@ -15,12 +15,16 @@ export enum IUserStatus {
 
 export interface IUser extends Document {
     _id: string | ObjectId;
-    firstName: string;
-    lastName: string;
+    name: string;
     email?: string;
     phone?: string;
     password: string;
     role: IUserRole;
     image?: string;
     status: IUserStatus;
+    batchNumber: string;
+    batchId?: ObjectId;
+    createdAt: Date;
+    updatedAt: Date;
+    admissionId: ObjectId;
 }

@@ -1,10 +1,12 @@
-// server/routes/coursebatch.routes.ts
 import { Router } from 'express';
 import { courseBatchController } from './coursebatch.controller';
 import validateRequest from 'src/utils/validateRequest';
 import { createBatchDto, updateBatchDto } from './coursebatch.dto';
 
 const router = Router();
+
+// Add this route before parameterized routes
+router.get('/check/:batchNumber', courseBatchController.checkBatchExists);
 
 // Public routes
 router.get('/', courseBatchController.getAllBatches);

@@ -1,6 +1,6 @@
-// server/services/user.service.ts
 import type { IUser } from './user.interface';
 import User from './user.model';
+import { IUserRole, IUserStatus } from './user.interface';
 
 // Helper type for lean documents
 type LeanUser = Omit<IUser, keyof Document> & {
@@ -27,7 +27,28 @@ const findUserByEmailOrPhone = async (identifier: string): Promise<IUser | null>
 };
 
 const createUser = async (data: Partial<IUser>): Promise<IUser> => {
-    return await User.create(data);
+    // Ensure required fields have defaults
+    const userData: any = {
+        ...data,
+        role: data.role || IUserRole._STUDENT,
+        status: data.status || IUserStatus._ACTIVE,
+    };
+
+    // Make sure name is provided
+    if (!userData.name) {
+        throw new Error('Name is required');
+    }
+
+    // Ensure undefined for empty optional fields
+    if (!userData.email) {
+        userData.email = undefined;
+    }
+
+    if (!userData.phone) {
+        userData.phone = undefined;
+    }
+
+    return await User.create(userData);
 };
 
 const updateUser = async (id: string, data: Partial<IUser>): Promise<IUser | null> => {
