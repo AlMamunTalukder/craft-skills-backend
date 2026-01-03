@@ -14,6 +14,7 @@ import passport from 'passport';
 import notFound from '@/routes/notFound';
 import MongoStore from 'connect-mongo';
 import { connectRedis } from '@/config/redis';
+import '@/workers/participant.worker';
 
 setupGlobalErrorHandlers();
 

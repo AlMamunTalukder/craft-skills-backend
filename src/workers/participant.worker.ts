@@ -3,11 +3,15 @@ import mongoose from 'mongoose';
 import { redisConnection } from '../queues/connection';
 import { Participant, Seminar } from '../modules/seminar/seminar.model';
 import { appendDataToGoogleSheet } from 'src/utils/googleSheets';
+import logger from 'src/shared/logger';
 
 new Worker(
     'participant-queue',
     async (job) => {
         const { participantData } = job.data;
+        logger.info(
+            `Processing registration for: ${participantData.email || participantData.phone}`,
+        );
 
         const session = await mongoose.startSession();
         session.startTransaction();
@@ -24,12 +28,16 @@ new Worker(
             );
 
             if (!seminar) {
-                throw new Error('Seminar not found');
+                throw new Error(`Seminar with ID ${participantData.seminarId} not found`);
             }
 
             // 3. Commit DB transaction first
             await session.commitTransaction();
             session.endSession();
+
+            logger.info(
+                `Participant ${participant._id} saved to DB and linked to seminar ${seminar._id}`,
+            );
 
             // 4. Append to Google Sheet (OUTSIDE transaction)
             const registrationDate = new Date().toLocaleString('en-US', {
@@ -41,24 +49,29 @@ new Worker(
                 hour12: true,
             });
 
+            const sheetTitle = `${seminar.sl || 'Seminar'}-রেজিস্ট্রেশন`;
+
             await appendDataToGoogleSheet(
-                `${seminar.sl}-রেজিস্ট্রেশন`,
+                sheetTitle,
                 ['Name', 'Phone', 'WhatsApp', 'Email', 'Occupation', 'Address', 'Registered At'],
                 [
-                    participant.name,
-                    participant.phone,
-                    participant.whatsapp,
-                    participant.email,
-                    participant.occupation,
-                    participant.address,
+                    participant.name || '',
+                    participant.phone || '',
+                    participant.whatsapp || '',
+                    participant.email || '',
+                    participant.occupation || '',
+                    participant.address || '',
                     registrationDate,
                 ],
             );
 
+            logger.info(`Data successfully appended to Google Sheet: ${sheetTitle}`);
+
             return participant;
-        } catch (error) {
+        } catch (error: any) {
             await session.abortTransaction();
             session.endSession();
+            logger.error(`Error processing job ${job.id}: ${error.message}`, { error });
             throw error;
         }
     },

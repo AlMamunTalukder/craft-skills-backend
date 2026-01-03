@@ -1,5 +1,6 @@
 import { google } from 'googleapis';
 import config from 'src/config';
+import logger from 'src/shared/logger';
 
 const SPREADSHEET_ID = config.GOOGLE_SHEET_ID;
 
@@ -19,43 +20,59 @@ export const appendDataToGoogleSheet = async (
     values: (string | number | null | undefined)[],
 ): Promise<void> => {
     const sanitizedTitle = sanitizeTabName(tabTitle);
+    logger.info(`Attempting to append data to Google Sheet: ${sanitizedTitle}`);
 
-    const meta = await sheets.spreadsheets.get({
-        spreadsheetId: SPREADSHEET_ID,
-    });
-
-    const existingTabs = meta.data.sheets?.map((s) => s.properties?.title);
-
-    if (!existingTabs?.includes(sanitizedTitle)) {
-        await sheets.spreadsheets.batchUpdate({
+    try {
+        logger.info(`Fetching spreadsheet metadata for ID: ${SPREADSHEET_ID}`);
+        const meta = await sheets.spreadsheets.get({
             spreadsheetId: SPREADSHEET_ID,
-            requestBody: {
-                requests: [
-                    {
-                        addSheet: {
-                            properties: { title: sanitizedTitle },
-                        },
-                    },
-                ],
-            },
         });
 
-        await sheets.spreadsheets.values.update({
+        const existingTabs = meta.data.sheets?.map((s) => s.properties?.title);
+        logger.info(`Existing tabs in spreadsheet: ${existingTabs?.join(', ')}`);
+
+        if (!existingTabs?.includes(sanitizedTitle)) {
+            logger.info(`Tab "${sanitizedTitle}" not found. Creating it...`);
+            await sheets.spreadsheets.batchUpdate({
+                spreadsheetId: SPREADSHEET_ID,
+                requestBody: {
+                    requests: [
+                        {
+                            addSheet: {
+                                properties: { title: sanitizedTitle },
+                            },
+                        },
+                    ],
+                },
+            });
+
+            logger.info(`Tab "${sanitizedTitle}" created. Adding headers...`);
+            await sheets.spreadsheets.values.update({
+                spreadsheetId: SPREADSHEET_ID,
+                range: `${sanitizedTitle}!A1`,
+                valueInputOption: 'RAW',
+                requestBody: {
+                    values: [headers],
+                },
+            });
+        }
+
+        logger.info(`Appending data row to tab: ${sanitizedTitle}`);
+        await sheets.spreadsheets.values.append({
             spreadsheetId: SPREADSHEET_ID,
             range: `${sanitizedTitle}!A1`,
             valueInputOption: 'RAW',
             requestBody: {
-                values: [headers],
+                values: [values],
             },
         });
+        logger.info(`Successfully appended data to Google Sheet: ${sanitizedTitle}`);
+    } catch (error: any) {
+        logger.error(`Error in appendDataToGoogleSheet: ${error.message}`, {
+            error,
+            tabTitle: sanitizedTitle,
+            spreadsheetId: SPREADSHEET_ID,
+        });
+        throw error;
     }
-
-    await sheets.spreadsheets.values.append({
-        spreadsheetId: SPREADSHEET_ID,
-        range: `${sanitizedTitle}!A1`,
-        valueInputOption: 'RAW',
-        requestBody: {
-            values: [values],
-        },
-    });
 };
