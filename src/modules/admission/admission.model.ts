@@ -6,6 +6,7 @@ export interface IAdmission extends Document {
     email?: string;
     phone?: string;
     whatsapp?: string;
+    facebook?: string;
     occupation?: string;
     address?: string;
     courseId: Types.ObjectId;
@@ -59,6 +60,10 @@ const AdmissionSchema = new Schema<IAdmission>(
                 },
                 message: 'Invalid WhatsApp number',
             },
+        },
+        facebook: {
+            type: String,
+            trim: true,
         },
         occupation: {
             type: String,
