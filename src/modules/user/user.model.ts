@@ -1,7 +1,41 @@
+// server/models/user.model.ts
 import { Schema, model, models } from 'mongoose';
-import type { IUser } from './user.interface';
-import { IUserRole, IUserStatus } from './user.interface';
-import bcrypt from 'bcrypt';
+import type { Document } from 'mongoose';
+import bcrypt from 'bcrypt'; // Add bcrypt import
+
+export enum UserRole {
+    STUDENT = 'student',
+    TEACHER = 'teacher',
+    ADMIN = 'admin',
+}
+
+export enum UserStatus {
+    ACTIVE = 'active',
+    INACTIVE = 'inactive',
+    SUSPENDED = 'suspended',
+}
+
+export interface IUser extends Document {
+    name: string;
+    email?: string;
+    phone?: string;
+    password: string;
+    role: UserRole;
+    image?: string;
+    status: UserStatus;
+    batches: {
+        batchId: Schema.Types.ObjectId;
+        batchCode: string;
+        admissionId: Schema.Types.ObjectId;
+        isActive: boolean;
+        enrolledAt: Date;
+    }[];
+    createdAt: Date;
+    updatedAt: Date;
+
+    // Add method signature
+    validatePassword(password: string): Promise<boolean>;
+}
 
 const userSchema = new Schema<IUser>(
     {
@@ -12,20 +46,16 @@ const userSchema = new Schema<IUser>(
         },
         email: {
             type: String,
-            required: false,
             unique: true,
-            sparse: true, // This is the key fix
+            sparse: true,
             lowercase: true,
             trim: true,
-            default: undefined, // Use undefined instead of null
         },
         phone: {
             type: String,
-            required: false,
             unique: true,
-            sparse: true, // This is the key fix
+            sparse: true,
             trim: true,
-            default: undefined, // Use undefined instead of null
         },
         password: {
             type: String,
@@ -33,86 +63,76 @@ const userSchema = new Schema<IUser>(
         },
         role: {
             type: String,
-            enum: Object.values(IUserRole),
-            required: true,
-            default: IUserRole._STUDENT,
+            enum: Object.values(UserRole),
+            default: UserRole.STUDENT,
         },
         image: {
             type: String,
-            required: false,
         },
         status: {
             type: String,
-            enum: Object.values(IUserStatus),
-            required: true,
-            default: IUserStatus._ACTIVE,
+            enum: Object.values(UserStatus),
+            default: UserStatus.ACTIVE,
         },
-        batchNumber: {
-            type: String,
-            required: true,
-            trim: true,
-        },
-        batchId: {
-            type: Schema.Types.ObjectId,
-            ref: 'CourseBatch',
-            required: false,
-        },
-        admissionId: {
-            type: Schema.Types.ObjectId,
-            ref: 'Admission',
-            required: false,
-        },
+        batches: [
+            {
+                batchId: {
+                    type: Schema.Types.ObjectId,
+                    ref: 'CourseBatch',
+                    required: true,
+                },
+                batchCode: {
+                    type: String,
+                    required: true,
+                },
+                admissionId: {
+                    type: Schema.Types.ObjectId,
+                    ref: 'Admission',
+                    required: true,
+                },
+                isActive: {
+                    type: Boolean,
+                    default: true,
+                },
+                enrolledAt: {
+                    type: Date,
+                    default: Date.now,
+                },
+            },
+        ],
     },
     {
         timestamps: true,
     },
 );
 
-userSchema.pre<IUser>('save', async function (next) {
-    if (!this.isModified('password')) {
-        return next();
+// Hash password before saving
+userSchema.pre('save', async function (next) {
+    if (!this.isModified('password')) return next();
+
+    try {
+        const salt = await bcrypt.genSalt(10);
+        this.password = await bcrypt.hash(this.password, salt);
+        next();
+    } catch (error: any) {
+        next(error);
     }
-    const salt = await bcrypt.genSalt(10);
-    this.password = await bcrypt.hash(this.password, salt);
-    next();
 });
 
-userSchema.methods.validatePassword = async function (candidatePassword: string): Promise<boolean> {
-    return bcrypt.compare(candidatePassword, this.password);
+// Add password validation method
+userSchema.methods.validatePassword = async function (password: string): Promise<boolean> {
+    try {
+        return await bcrypt.compare(password, this.password);
+    } catch (error) {
+        return false;
+    }
 };
 
-userSchema.pre('save', function (next) {
-    // Ensure empty strings become undefined (not null)
-    if (this.email === '' || this.email === null) {
-        this.email = undefined;
-    }
-    if (this.phone === '' || this.phone === null) {
-        this.phone = undefined;
-    }
-    next();
-});
-
-userSchema.pre('findOneAndUpdate', function (next) {
-    const update = this.getUpdate() as any;
-
-    if (update?.$set) {
-        if (update.$set.email === '' || update.$set.email === null) {
-            update.$set.email = undefined;
-        }
-        if (update.$set.phone === '' || update.$set.phone === null) {
-            update.$set.phone = undefined;
-        }
-    }
-    next();
-});
-
-// Add indexes - make sure they are sparse
+// Add indexes
+userSchema.index({ 'batches.batchId': 1 });
+userSchema.index({ 'batches.admissionId': 1 });
 userSchema.index({ email: 1 }, { unique: true, sparse: true });
 userSchema.index({ phone: 1 }, { unique: true, sparse: true });
-userSchema.index({ batchNumber: 1 });
-userSchema.index({ role: 1 });
-userSchema.index({ status: 1 });
 
-const User = models.User || model<IUser>('User', userSchema);
-
+export const User = models.User || model<IUser>('User', userSchema);
 export default User;
