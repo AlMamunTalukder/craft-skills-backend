@@ -5,6 +5,7 @@ export const createAdmissionDto = z.object({
     email: z.string().email('Invalid email').optional().or(z.literal('')),
     phone: z.string().min(1, 'Phone is required'),
     whatsapp: z.string().optional(),
+    facebook: z.string().optional(),
     occupation: z.string().optional(),
     address: z.string().optional(),
     courseId: z.string().min(1, 'Course is required'),

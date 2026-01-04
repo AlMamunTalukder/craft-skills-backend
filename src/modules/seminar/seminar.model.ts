@@ -41,7 +41,7 @@ const ParticipantSchema = new Schema<IParticipant>(
     },
     {
         collection: 'participants',
-        timestamps: false, // Prisma already handles registeredAt
+        timestamps: false,
     },
 );
 
@@ -67,7 +67,6 @@ const SeminarSchema = new Schema<ISeminar>(
     },
 );
 
-// server/models/seminar.model.ts
 SeminarSchema.index({ createdAt: -1 });
 SeminarSchema.index({ isActive: 1 });
 SeminarSchema.index({ date: 1 });
