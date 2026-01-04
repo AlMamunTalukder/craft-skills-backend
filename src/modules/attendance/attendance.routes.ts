@@ -1,34 +1,19 @@
-// server/routes/attendance.routes.ts
 import { Router } from 'express';
-import { auth } from 'src/middleware/auth';
 import { attendanceController } from './attendance.controller';
-import { createAttendanceDto, updateAttendanceDto } from './attendance.dto';
-import validateRequest from 'src/utils/validateRequest';
+import { auth } from 'src/middleware/auth';
 
 const router = Router();
 
-// Apply authentication to all routes
-router.use(auth(['admin', 'teacher']));
+// Apply authentication
+router.use(auth(['student']));
 
-// Get all attendance routines
-router.get('/', attendanceController.getAllAttendances);
+// Get attendance
+router.get('/', attendanceController.getAttendance);
 
-// Get attendance statistics
-router.get('/stats', attendanceController.getAttendanceStats);
+// Save attendance
+router.post('/save', attendanceController.saveAttendance);
 
-// Get attendance by ID
-router.get('/:id', attendanceController.getAttendanceById);
-
-// Create attendance routine
-router.post('/', validateRequest(createAttendanceDto), attendanceController.createAttendance);
-
-// Update attendance routine
-router.put('/:id', validateRequest(updateAttendanceDto), attendanceController.updateAttendance);
-
-// Delete attendance routine
-router.delete('/:id', attendanceController.deleteAttendance);
-
-// Update attendance status
-router.put('/:id/status', attendanceController.updateAttendanceStatus);
+// Get summary
+router.get('/summary', attendanceController.getSummary);
 
 export const attendanceRoutes = router;

@@ -11,7 +11,7 @@ import { courseRoutes } from 'src/modules/course/course.routes';
 import { couponRoutes } from 'src/modules/coupon/coupon.routes';
 import { attendanceRoutes } from 'src/modules/attendance/attendance.routes';
 import { AdmissionRoutes } from 'src/modules/admission/admission.routes';
-import { studentAttendanceRoutes } from 'src/modules/studentAttendance/studentAttendance.routes';
+// import { studentAttendanceRoutes } from 'src/modules/studentAttendance/studentAttendance.routes';
 
 const router = Router();
 
@@ -86,10 +86,10 @@ const moduleRoutes = [
         path: '/attendance',
         route: attendanceRoutes,
     },
-    {
-        path: '/student-attendance',
-        route: studentAttendanceRoutes,
-    },
+    // {
+    //     path: '/student-attendance',
+    //     route: studentAttendanceRoutes,
+    // },
 ];
 
 moduleRoutes.forEach((route) => router.use(route.path, route.route));
