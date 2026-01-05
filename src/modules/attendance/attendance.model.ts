@@ -70,7 +70,7 @@ const attendanceSchema = new Schema<IAttendance>(
         },
         sessionType: {
             type: String,
-            enum: ['regular', 'problemSolving', 'practice'],
+            enum: ['regular', 'problemSolving', 'practice', 'special', 'guest'],
             required: true,
         },
         attended: {

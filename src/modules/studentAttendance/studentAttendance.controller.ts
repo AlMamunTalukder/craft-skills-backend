@@ -287,6 +287,169 @@ export const studentAttendanceController = {
             });
         }
     },
+    //
+    updateSpecialClass: async (req: Request, res: Response) => {
+        try {
+            const user = (req as any).user;
+            const { className, attended = true } = req.body;
+
+            if (!user || !className) {
+                return res.status(400).json({
+                    success: false,
+                    message: 'Missing required fields',
+                });
+            }
+
+            // Get user's batch number
+            const userData = await User.findById(user._id).select('batchNumber').lean();
+            if (!userData) {
+                return res.status(404).json({
+                    success: false,
+                    message: 'User not found',
+                });
+            }
+
+            const userDataAny = userData as any;
+            const batchNumber = userDataAny.batchNumber || '35';
+
+            // Set date to today
+            const today = new Date();
+            today.setHours(0, 0, 0, 0);
+
+            // Check if attendance already exists
+            const existingAttendance = await Attendance.findOne({
+                studentId: user._id,
+                className,
+                attendanceType: 'special',
+                date: today,
+            });
+
+            if (existingAttendance) {
+                // Update existing attendance
+                existingAttendance.attended = attended;
+                existingAttendance.markedAt = new Date();
+                await existingAttendance.save();
+            } else {
+                // Create new attendance
+                const attendance = new Attendance({
+                    studentId: user._id,
+                    batchId: batchNumber,
+                    className,
+                    attendanceType: 'special',
+                    sessionType: 'special',
+                    attended,
+                    date: today,
+                    markedAt: new Date(),
+                });
+                await attendance.save();
+            }
+
+            // Get updated statistics
+            const updatedStats = await calculateAttendanceStats(user._id.toString(), batchNumber);
+
+            res.json({
+                success: true,
+                message: `Special class attendance ${attended ? 'marked' : 'unmarked'} successfully`,
+                data: updatedStats,
+            });
+        } catch (error: any) {
+            console.error('Update special class error:', error);
+
+            if (error.code === 11000) {
+                return res.status(400).json({
+                    success: false,
+                    message: 'Attendance already marked for this special class today',
+                });
+            }
+
+            res.status(500).json({
+                success: false,
+                message: 'Failed to update special class attendance',
+            });
+        }
+    },
+
+    // Update guest class attendance
+    updateGuestClass: async (req: Request, res: Response) => {
+        try {
+            const user = (req as any).user;
+            const { className, attended = true } = req.body;
+
+            if (!user || !className) {
+                return res.status(400).json({
+                    success: false,
+                    message: 'Missing required fields',
+                });
+            }
+
+            // Get user's batch number
+            const userData = await User.findById(user._id).select('batchNumber').lean();
+            if (!userData) {
+                return res.status(404).json({
+                    success: false,
+                    message: 'User not found',
+                });
+            }
+
+            const userDataAny = userData as any;
+            const batchNumber = userDataAny.batchNumber || '35';
+
+            // Set date to today
+            const today = new Date();
+            today.setHours(0, 0, 0, 0);
+
+            // Check if attendance already exists
+            const existingAttendance = await Attendance.findOne({
+                studentId: user._id,
+                className,
+                attendanceType: 'guest',
+                date: today,
+            });
+
+            if (existingAttendance) {
+                // Update existing attendance
+                existingAttendance.attended = attended;
+                existingAttendance.markedAt = new Date();
+                await existingAttendance.save();
+            } else {
+                // Create new attendance
+                const attendance = new Attendance({
+                    studentId: user._id,
+                    batchId: batchNumber,
+                    className,
+                    attendanceType: 'guest',
+                    sessionType: 'guest',
+                    attended,
+                    date: today,
+                    markedAt: new Date(),
+                });
+                await attendance.save();
+            }
+
+            // Get updated statistics
+            const updatedStats = await calculateAttendanceStats(user._id.toString(), batchNumber);
+
+            res.json({
+                success: true,
+                message: `Guest class attendance ${attended ? 'marked' : 'unmarked'} successfully`,
+                data: updatedStats,
+            });
+        } catch (error: any) {
+            console.error('Update guest class error:', error);
+
+            if (error.code === 11000) {
+                return res.status(400).json({
+                    success: false,
+                    message: 'Attendance already marked for this guest class today',
+                });
+            }
+
+            res.status(500).json({
+                success: false,
+                message: 'Failed to update guest class attendance',
+            });
+        }
+    },
 };
 
 // Helper function to calculate attendance statistics

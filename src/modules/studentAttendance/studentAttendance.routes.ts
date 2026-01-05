@@ -23,4 +23,6 @@ router.post('/mark', studentAttendanceController.markAttendance);
 router.get('/today-sessions', studentAttendanceController.getTodaySessions);
 router.get('/history', studentAttendanceController.getAttendanceHistory);
 
+router.post('/special-class', studentAttendanceController.updateSpecialClass);
+router.post('/guest-class', studentAttendanceController.updateGuestClass);
 export const studentAttendanceRoutes = router;
