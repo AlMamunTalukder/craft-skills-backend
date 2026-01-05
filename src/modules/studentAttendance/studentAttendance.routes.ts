@@ -1,26 +1,25 @@
-// // server/routes/studentAttendance.routes.ts
-// import { Router } from 'express';
-// import { auth } from 'src/middleware/auth';
-// import { studentAttendanceController } from './studentAttendance.controller';
+import { Router } from 'express';
+import { auth } from 'src/middleware/auth';
+import { studentAttendanceController } from './studentAttendance.controller';
 
-// const router = Router();
+const router = Router();
 
-// // Apply authentication (student role required)
-// router.use(auth(['student']));
+// Apply authentication
+router.use(auth(['student']));
 
-// // Get student's batches
-// router.get('/my-batches', studentAttendanceController.getMyBatches);
+// Get attendance
+router.get('/', studentAttendanceController.getAttendance);
 
-// // Get attendance routines for a batch
-// router.get('/routines', studentAttendanceController.getAttendanceRoutines);
+// Save main class
+router.post('/main-class', studentAttendanceController.saveMainClass);
 
-// // Get student's attendance for a batch
-// router.get('/my-attendance', studentAttendanceController.getMyAttendance);
+// Save special class
+router.post('/special-class', studentAttendanceController.saveSpecialClass);
 
-// // Save student attendance
-// router.post('/save', studentAttendanceController.saveAttendance);
+// Save guest class
+router.post('/guest-class', studentAttendanceController.saveGuestClass);
 
-// // Get attendance statistics
-// router.get('/stats', studentAttendanceController.getAttendanceStats);
+// Get statistics
+router.get('/statistics', studentAttendanceController.getStatistics);
 
-// export const studentAttendanceRoutes = router;
+export const studentAttendanceRoutes = router;
