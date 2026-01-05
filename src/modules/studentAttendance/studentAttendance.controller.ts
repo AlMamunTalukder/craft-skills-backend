@@ -1,11 +1,27 @@
 // src/modules/studentAttendance/studentAttendance.controller.ts
 import type { Request, Response } from 'express';
 import mongoose from 'mongoose';
-import StudentAttendance from './studentAttendance.model';
+import User from '../user/user.model';
+import Attendance from '../attendance/attendance.model';
+
+// Define proper TypeScript interfaces based on your User model
+interface UserLeanDocument {
+    _id: mongoose.Types.ObjectId;
+    name: string;
+    email: string;
+    phone: string;
+    role: string;
+    status: string;
+    batchNumber: string;
+    batchId: mongoose.Types.ObjectId;
+    admissionId: mongoose.Types.ObjectId;
+    createdAt: Date;
+    updatedAt: Date;
+}
 
 export const studentAttendanceController = {
-    // Get student's attendance - FIXED VERSION
-    getAttendance: async (req: Request, res: Response) => {
+    // Get student dashboard data
+    getDashboard: async (req: Request, res: Response) => {
         try {
             const user = (req as any).user;
 
@@ -16,406 +32,317 @@ export const studentAttendanceController = {
                 });
             }
 
-            const userId = user._id || user.id;
-            const batchId = (req.query.batchId as string) || '36';
+            // Get user with populated batch
+            const userData = await User.findById(user._id)
+                .populate('batchId', 'name code description isActive')
+                .lean();
 
-            // Try to find attendance by studentId and batchId
-            let attendance = await StudentAttendance.findOne({
-                studentId: new mongoose.Types.ObjectId(userId),
-                batchId,
-            });
-
-            // If not found, try to find by studentId only
-            if (!attendance) {
-                attendance = await StudentAttendance.findOne({
-                    studentId: new mongoose.Types.ObjectId(userId),
-                });
-
-                // If found old record without batchId, update it
-                if (attendance && !attendance.batchId) {
-                    attendance.batchId = batchId;
-                    await attendance.save();
-                }
-            }
-
-            // If still not found, create new
-            if (!attendance) {
-                attendance = new StudentAttendance({
-                    studentId: new mongoose.Types.ObjectId(userId),
-                    batchId,
-                    attendanceRoutineId: null,
-                });
-
-                await attendance.save();
-
-                return res.json({
-                    success: true,
-                    data: attendance,
-                    message: 'New attendance record created',
+            if (!userData) {
+                return res.status(404).json({
+                    success: false,
+                    message: 'User not found',
                 });
             }
+
+            // Type assertion with proper interface
+            const typedUserData = userData as unknown as UserLeanDocument & {
+                batchId: {
+                    _id: mongoose.Types.ObjectId;
+                    name: string;
+                    code: string;
+                    description: string;
+                    isActive: boolean;
+                };
+            };
+
+            // Calculate attendance statistics
+            const attendanceStats = await calculateAttendanceStats(
+                user._id.toString(),
+                typedUserData.batchNumber,
+            );
 
             res.json({
                 success: true,
-                data: attendance,
+                data: {
+                    user: typedUserData,
+                    attendanceStats,
+                },
             });
         } catch (error: any) {
-            console.error('Get attendance error:', error);
-
-            // Handle duplicate key error
-            if (error.code === 11000) {
-                // Try to find the existing record
-                const user = (req as any).user;
-                const userId = user._id || user.id;
-                const batchId = (req.query.batchId as string) || '36';
-
-                const attendance = await StudentAttendance.findOne({
-                    studentId: new mongoose.Types.ObjectId(userId),
-                });
-
-                if (attendance) {
-                    return res.json({
-                        success: true,
-                        data: attendance,
-                        message: 'Found existing attendance',
-                    });
-                }
-            }
-
+            console.error('Get dashboard error:', error);
             res.status(500).json({
                 success: false,
-                message: 'Failed to get attendance',
-                error: process.env.NODE_ENV === 'development' ? error.message : undefined,
+                message: 'Failed to load dashboard',
             });
         }
     },
 
-    // Save main class attendance
-    saveMainClass: async (req: Request, res: Response) => {
+    // Mark attendance - FIXED VERSION
+    markAttendance: async (req: Request, res: Response) => {
         try {
             const user = (req as any).user;
-            const { className, sessionType, attended, batchId = '36' } = req.body;
+            const { className, sessionType, attended = true } = req.body;
 
-            if (!className || !sessionType) {
+            if (!user || !className || !sessionType) {
                 return res.status(400).json({
                     success: false,
-                    message: 'ClassName and sessionType are required',
+                    message: 'Missing required fields',
                 });
             }
 
-            console.log('Saving main class:', {
+            // Get user's batch number - FIXED TYPE
+            const userData = await User.findById(user._id).select('batchNumber').lean();
+
+            if (!userData) {
+                return res.status(404).json({
+                    success: false,
+                    message: 'User not found',
+                });
+            }
+
+            // Type assertion for userData
+            const typedUserData = userData as unknown as { batchNumber: string };
+
+            // Set date to today (start of day)
+            const today = new Date();
+            today.setHours(0, 0, 0, 0);
+
+            // Check if attendance already exists
+            const existingAttendance = await Attendance.findOne({
+                studentId: user._id,
                 className,
                 sessionType,
-                attended,
-                batchId,
-                userId: user._id,
+                date: today,
             });
 
-            // FIRST: Try to find by studentId and the provided batchId
-            let attendance = await StudentAttendance.findOne({
-                studentId: new mongoose.Types.ObjectId(user._id || user.id),
-                batchId,
-            });
-
-            // SECOND: If not found with exact batchId, try to find by studentId only
-            if (!attendance) {
-                console.log(
-                    `No attendance found for batch ${batchId}, searching for any attendance record...`,
-                );
-                attendance = await StudentAttendance.findOne({
-                    studentId: new mongoose.Types.ObjectId(user._id || user.id),
+            if (existingAttendance) {
+                // Update existing attendance
+                existingAttendance.attended = attended;
+                existingAttendance.markedAt = new Date();
+                await existingAttendance.save();
+            } else {
+                // Create new attendance
+                const attendance = new Attendance({
+                    studentId: user._id,
+                    batchId: typedUserData.batchNumber,
+                    className,
+                    sessionType,
+                    attended,
+                    date: today,
+                    markedAt: new Date(),
                 });
-
-                // If found but with different batchId, update it
-                if (attendance && attendance.batchId !== batchId) {
-                    console.log(
-                        `Found attendance for batch ${attendance.batchId}, updating to batch ${batchId}...`,
-                    );
-                    attendance.batchId = batchId;
-                    await attendance.save();
-                }
+                await attendance.save();
             }
 
-            // THIRD: If still not found, create new
-            if (!attendance) {
-                console.log('Creating new attendance record...');
-                attendance = new StudentAttendance({
-                    studentId: new mongoose.Types.ObjectId(user._id || user.id),
-                    batchId,
-                });
-            }
-
-            // Update main class
-            const mainClass = attendance.mainClasses.get(className);
-            if (mainClass) {
-                if (sessionType === 'regular') mainClass.regular = attended;
-                if (sessionType === 'problemSolving') mainClass.problemSolving = attended;
-                if (sessionType === 'practice') mainClass.practice = attended;
-                mainClass.lastUpdated = new Date();
-
-                attendance.mainClasses.set(className, mainClass);
-            }
-
-            // Recalculate statistics
-            await recalculateStatistics(attendance);
-
-            await attendance.save();
-
-            console.log('Successfully saved attendance:', attendance._id);
+            // Get updated statistics
+            const updatedStats = await calculateAttendanceStats(
+                user._id.toString(),
+                typedUserData.batchNumber,
+            );
 
             res.json({
                 success: true,
-                message: 'Main class attendance saved',
-                data: attendance,
+                message: `Attendance ${attended ? 'marked' : 'unmarked'} successfully`,
+                data: updatedStats,
             });
-        } catch (error) {
-            console.error('Save main class error:', error);
-            res.status(500).json({
-                success: false,
-                message: 'Failed to save attendance',
-                // error: process.env.NODE_ENV === 'development' ? error.message : undefined,
-            });
-        }
-    },
-    // saveMainClass: async (req: Request, res: Response) => {
-    //     try {
-    //         const user = (req as any).user;
-    //         const { className, sessionType, attended, batchId = '36' } = req.body;
+        } catch (error: any) {
+            console.error('Mark attendance error:', error);
 
-    //         if (!className || !sessionType) {
-    //             return res.status(400).json({
-    //                 success: false,
-    //                 message: 'ClassName and sessionType are required',
-    //             });
-    //         }
-
-    //         // Find attendance
-    //         let attendance = await StudentAttendance.findOne({
-    //             studentId: new mongoose.Types.ObjectId(user._id || user.id),
-    //             batchId,
-    //         });
-
-    //         if (!attendance) {
-    //             attendance = new StudentAttendance({
-    //                 studentId: new mongoose.Types.ObjectId(user._id || user.id),
-    //                 batchId,
-    //                 attendanceRoutineId: null,
-    //             });
-    //         }
-
-    //         // Update main class
-    //         const mainClass = attendance.mainClasses.get(className) || {
-    //             regular: false,
-    //             problemSolving: false,
-    //             practice: false,
-    //             lastUpdated: new Date(),
-    //         };
-
-    //         if (sessionType === 'regular') mainClass.regular = attended;
-    //         if (sessionType === 'problemSolving') mainClass.problemSolving = attended;
-    //         if (sessionType === 'practice') mainClass.practice = attended;
-    //         mainClass.lastUpdated = new Date();
-
-    //         attendance.mainClasses.set(className, mainClass);
-
-    //         // Recalculate statistics
-    //         await recalculateStatistics(attendance);
-    //         await attendance.save();
-
-    //         res.json({
-    //             success: true,
-    //             message: 'Main class attendance saved',
-    //             data: attendance,
-    //         });
-    //     } catch (error) {
-    //         console.error('Save main class error:', error);
-    //         res.status(500).json({
-    //             success: false,
-    //             message: 'Failed to save attendance',
-    //         });
-    //     }
-    // },
-
-    // Save special class attendance
-    saveSpecialClass: async (req: Request, res: Response) => {
-        try {
-            const user = (req as any).user;
-            const { className, attended, batchId = '36' } = req.body;
-
-            if (!className) {
+            if (error.code === 11000) {
                 return res.status(400).json({
                     success: false,
-                    message: 'ClassName is required',
+                    message: 'Attendance already marked for this session today',
                 });
             }
 
-            let attendance = await StudentAttendance.findOne({
-                studentId: new mongoose.Types.ObjectId(user._id || user.id),
-                batchId,
-            });
-
-            if (!attendance) {
-                attendance = new StudentAttendance({
-                    studentId: new mongoose.Types.ObjectId(user._id || user.id),
-                    batchId,
-                    attendanceRoutineId: null,
-                });
-            }
-
-            // Update special class
-            const specialClass = attendance.specialClasses.get(className) || {
-                attended: false,
-                lastUpdated: new Date(),
-            };
-
-            specialClass.attended = attended;
-            specialClass.lastUpdated = new Date();
-            attendance.specialClasses.set(className, specialClass);
-
-            await recalculateStatistics(attendance);
-            await attendance.save();
-
-            res.json({
-                success: true,
-                message: 'Special class attendance saved',
-                data: attendance,
-            });
-        } catch (error) {
-            console.error('Save special class error:', error);
             res.status(500).json({
                 success: false,
-                message: 'Failed to save attendance',
+                message: 'Failed to mark attendance',
             });
         }
     },
 
-    // Save guest class attendance
-    saveGuestClass: async (req: Request, res: Response) => {
+    // Get today's sessions - FIXED VERSION
+    getTodaySessions: async (req: Request, res: Response) => {
         try {
             const user = (req as any).user;
-            const { className, attended, batchId = '36' } = req.body;
 
-            if (!className) {
-                return res.status(400).json({
+            if (!user) {
+                return res.status(401).json({
                     success: false,
-                    message: 'ClassName is required',
+                    message: 'Authentication required',
                 });
             }
 
-            let attendance = await StudentAttendance.findOne({
-                studentId: new mongoose.Types.ObjectId(user._id || user.id),
-                batchId,
-            });
+            // Get user's batch number - FIXED TYPE
+            const userData = await User.findById(user._id).select('batchNumber').lean();
 
-            if (!attendance) {
-                attendance = new StudentAttendance({
-                    studentId: new mongoose.Types.ObjectId(user._id || user.id),
-                    batchId,
-                    attendanceRoutineId: null,
+            if (!userData) {
+                return res.status(404).json({
+                    success: false,
+                    message: 'User not found',
                 });
             }
 
-            // Update guest class
-            const guestClass = attendance.guestClasses.get(className) || {
-                attended: false,
-                guestName: `Guest Speaker ${className.split(' ')[2] || '1'}`,
-                lastUpdated: new Date(),
-            };
+            // Type assertion
+            const typedUserData = userData as unknown as { batchNumber: string };
 
-            guestClass.attended = attended;
-            guestClass.lastUpdated = new Date();
-            attendance.guestClasses.set(className, guestClass);
+            // Generate all main classes for today (15 classes × 3 sessions)
+            const allMainClasses: Array<{
+                className: string;
+                sessionType: 'regular' | 'problemSolving' | 'practice';
+                time: string;
+                topic: string;
+            }> = [];
 
-            await recalculateStatistics(attendance);
-            await attendance.save();
+            // Generate 15 main classes with 3 sessions each
+            for (let i = 1; i <= 15; i++) {
+                const className = `Class ${i}`;
+
+                // Regular session (morning)
+                allMainClasses.push({
+                    className,
+                    sessionType: 'regular',
+                    time: '10:00 AM',
+                    topic: `Main Lecture ${i}`,
+                });
+
+                // Problem solving session (afternoon)
+                allMainClasses.push({
+                    className,
+                    sessionType: 'problemSolving',
+                    time: '2:00 PM',
+                    topic: `Problem Solving Session ${i}`,
+                });
+
+                // Practice session (evening)
+                allMainClasses.push({
+                    className,
+                    sessionType: 'practice',
+                    time: '4:00 PM',
+                    topic: `Practice Session ${i}`,
+                });
+            }
+
+            // Check which sessions are already attended
+            const sessionsWithAttendance = await Promise.all(
+                allMainClasses.map(async (session) => {
+                    const attendance = await Attendance.findOne({
+                        studentId: user._id,
+                        className: session.className,
+                        sessionType: session.sessionType,
+                        // date: { $gte: new Date(today.setHours(0, 0, 0, 0)) },
+                    });
+
+                    return {
+                        ...session,
+                        attended: attendance?.attended || false,
+                        attendanceId: attendance?._id,
+                    };
+                }),
+            );
 
             res.json({
                 success: true,
-                message: 'Guest class attendance saved',
-                data: attendance,
+                data: sessionsWithAttendance,
             });
-        } catch (error) {
-            console.error('Save guest class error:', error);
+        } catch (error: any) {
+            console.error('Get today sessions error:', error);
             res.status(500).json({
                 success: false,
-                message: 'Failed to save attendance',
+                message: 'Failed to load today sessions',
             });
         }
     },
 
-    // Get statistics
-    getStatistics: async (req: Request, res: Response) => {
+    // Get attendance history
+    getAttendanceHistory: async (req: Request, res: Response) => {
         try {
             const user = (req as any).user;
-            const batchId = (req.query.batchId as string) || '36';
+            const { limit = 20 } = req.query;
 
-            const attendance = await StudentAttendance.findOne({
-                studentId: new mongoose.Types.ObjectId(user._id || user.id),
-                batchId,
-            });
-
-            if (!attendance) {
-                return res.json({
-                    success: true,
-                    data: {
-                        main: { attended: 0, total: 45, percentage: 0 },
-                        special: { attended: 0, total: 5, percentage: 0 },
-                        guest: { attended: 0, total: 5, percentage: 0 },
-                        overall: { attended: 0, total: 55, percentage: 0 },
-                    },
+            if (!user) {
+                return res.status(401).json({
+                    success: false,
+                    message: 'Authentication required',
                 });
             }
 
+            const history = await Attendance.find({
+                studentId: user._id,
+            })
+                .sort({ date: -1, markedAt: -1 })
+                .limit(Number(limit))
+                .lean();
+
             res.json({
                 success: true,
-                data: attendance.statistics,
+                data: history,
             });
-        } catch (error) {
-            console.error('Get statistics error:', error);
+        } catch (error: any) {
+            console.error('Get attendance history error:', error);
             res.status(500).json({
                 success: false,
-                message: 'Failed to get statistics',
+                message: 'Failed to load attendance history',
             });
         }
     },
 };
 
-// Helper function to recalculate statistics
-async function recalculateStatistics(attendance: any) {
-    // Calculate main classes
-    let mainAttended = 0;
-    attendance.mainClasses.forEach((cls: any) => {
-        if (cls.regular) mainAttended++;
-        if (cls.problemSolving) mainAttended++;
-        if (cls.practice) mainAttended++;
-    });
+// Helper function to calculate attendance statistics
+async function calculateAttendanceStats(studentId: string, batchNumber: string) {
+    // Get all attendance records for this student
+    const allAttendance = await Attendance.find({
+        studentId: new mongoose.Types.ObjectId(studentId),
+        batchId: batchNumber,
+    }).lean();
 
-    // Calculate special classes
-    let specialAttended = 0;
-    attendance.specialClasses.forEach((cls: any) => {
-        if (cls.attended) specialAttended++;
-    });
+    // Calculate counts
+    const attended = allAttendance.filter((record) => record.attended).length;
+    const total = allAttendance.length;
 
-    // Calculate guest classes
-    let guestAttended = 0;
-    attendance.guestClasses.forEach((cls: any) => {
-        if (cls.attended) guestAttended++;
-    });
+    // Calculate by session type
+    const regular = allAttendance.filter((r) => r.sessionType === 'regular' && r.attended).length;
+    const problemSolving = allAttendance.filter(
+        (r) => r.sessionType === 'problemSolving' && r.attended,
+    ).length;
+    const practice = allAttendance.filter((r) => r.sessionType === 'practice' && r.attended).length;
 
     // Calculate percentages
-    const mainPercentage = Math.round((mainAttended / 45) * 100);
-    const specialPercentage = Math.round((specialAttended / 5) * 100);
-    const guestPercentage = Math.round((guestAttended / 5) * 100);
+    const percentage = total > 0 ? Math.round((attended / total) * 100) : 0;
+    const regularPercentage =
+        allAttendance.filter((r) => r.sessionType === 'regular').length > 0
+            ? Math.round(
+                  (regular / allAttendance.filter((r) => r.sessionType === 'regular').length) * 100,
+              )
+            : 0;
+    const problemSolvingPercentage =
+        allAttendance.filter((r) => r.sessionType === 'problemSolving').length > 0
+            ? Math.round(
+                  (problemSolving /
+                      allAttendance.filter((r) => r.sessionType === 'problemSolving').length) *
+                      100,
+              )
+            : 0;
+    const practicePercentage =
+        allAttendance.filter((r) => r.sessionType === 'practice').length > 0
+            ? Math.round(
+                  (practice / allAttendance.filter((r) => r.sessionType === 'practice').length) *
+                      100,
+              )
+            : 0;
 
-    const totalAttended = mainAttended + specialAttended + guestAttended;
-    const overallPercentage = Math.round((totalAttended / 55) * 100);
-
-    // Update statistics
-    attendance.statistics = {
-        main: { attended: mainAttended, total: 45, percentage: mainPercentage },
-        special: { attended: specialAttended, total: 5, percentage: specialPercentage },
-        guest: { attended: guestAttended, total: 5, percentage: guestPercentage },
-        overall: { attended: totalAttended, total: 55, percentage: overallPercentage },
-        lastUpdated: new Date(),
+    return {
+        summary: {
+            attended,
+            total,
+            percentage,
+        },
+        byType: {
+            regular: { attended: regular, percentage: regularPercentage },
+            problemSolving: { attended: problemSolving, percentage: problemSolvingPercentage },
+            practice: { attended: practice, percentage: practicePercentage },
+        },
+        recentCount: allAttendance.length,
     };
 }
