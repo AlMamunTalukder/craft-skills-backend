@@ -137,7 +137,7 @@
 // export const User = models.User || model<IUser>('User', userSchema);
 // export default User;
 
-// src/models/user.model.ts
+// src/modules/user/user.model.ts
 import { Schema, model, models } from 'mongoose';
 import type { Document, Types } from 'mongoose';
 import bcrypt from 'bcrypt';

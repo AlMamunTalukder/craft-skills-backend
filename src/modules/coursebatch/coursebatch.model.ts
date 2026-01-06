@@ -60,7 +60,8 @@
 
 // export const CourseBatch =
 //     models.CourseBatch || model<ICourseBatch>('CourseBatch', CourseBatchSchema);
-// src/models/coursebatch.model.ts
+
+// src/modules/coursebatch/coursebatch.model.ts
 import { Schema, model, models } from 'mongoose';
 import type { Document } from 'mongoose';
 

@@ -1,4 +1,4 @@
-// server/models/course.model.ts
+// server/modules/course/course.model.ts
 import { Schema, model, models } from 'mongoose';
 import type { Document } from 'mongoose';
 

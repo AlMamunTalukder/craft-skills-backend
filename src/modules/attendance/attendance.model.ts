@@ -39,7 +39,8 @@
 
 // export default mongoose.model<IAttendance>('Attendance', AttendanceSchema);
 //
-// src/models/attendance.model.ts
+
+// src/modules/attendance/attendance.model.ts
 import { Schema, model, models } from 'mongoose';
 import type { Document } from 'mongoose';
 
