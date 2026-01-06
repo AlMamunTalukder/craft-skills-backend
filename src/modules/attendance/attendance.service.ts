@@ -1,12 +1,8 @@
 // server/services/attendance.service.ts
 
 import type { CreateAttendanceDto, UpdateAttendanceDto } from './attendance.dto';
-import Attendance, {
-    AttendanceSessionType,
-    AttendanceType,
-    type IAttendance,
-    type IAttendanceClass,
-} from './attendance.model';
+import type { IAttendance } from './attendance.model';
+import Attendance from './attendance.model';
 
 // Define a lean version of IAttendance (without Mongoose Document methods)
 type LeanAttendance = Omit<IAttendance, keyof Document> & {
@@ -18,8 +14,8 @@ const generateClasses = (
     mainClasses: number,
     specialClasses: number,
     guestClasses: number,
-): IAttendanceClass[] => {
-    const classes: IAttendanceClass[] = [];
+): IAttendance[] => {
+    const classes: IAttendance[] = [];
 
     // Generate main classes
     for (let i = 1; i <= mainClasses; i++) {
