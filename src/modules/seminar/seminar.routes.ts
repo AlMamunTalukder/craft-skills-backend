@@ -3,6 +3,8 @@ import { createSeminarDto, updateSeminarDto, registerParticipantDto } from './se
 import { seminarController } from './seminar.controller';
 import validateRequest from 'src/utils/validateRequest';
 import { participantController } from './participant.controller';
+import { seminarConfirmationDto } from '../seminar-confirmation/seminar-confirmation.dto';
+import { seminarConfirmationController } from '../seminar-confirmation/seminar-confirmation.controller';
 
 const router = Router();
 
@@ -28,5 +30,10 @@ router.put(
 router.put('/:id/status', seminarController.changeStatus);
 router.delete('/:id', seminarController.deleteSeminar);
 router.post('/register', validateRequest(registerParticipantDto), participantController.register);
+router.post(
+    '/confirm',
+    validateRequest(seminarConfirmationDto),
+    seminarConfirmationController.confirmParticipation,
+);
 
 export const SeminarRoutes = router;

@@ -90,6 +90,10 @@ const moduleRoutes = [
         path: '/student-attendance',
         route: studentAttendanceRoutes,
     },
+    // {
+    //     path: '/confirm',
+    //     route: SeminarConfirmation,
+    // },
 ];
 
 moduleRoutes.forEach((route) => router.use(route.path, route.route));
