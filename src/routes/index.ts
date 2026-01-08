@@ -12,6 +12,7 @@ import { couponRoutes } from 'src/modules/coupon/coupon.routes';
 import { attendanceRoutes } from 'src/modules/attendance/attendance.routes';
 import { AdmissionRoutes } from 'src/modules/admission/admission.routes';
 import { studentAttendanceRoutes } from 'src/modules/studentAttendance/studentAttendance.routes';
+import { SeminarConfirmationRoutes } from 'src/modules/seminar-confirmation/seminar-confirmation.routes';
 
 const router = Router();
 
@@ -90,10 +91,10 @@ const moduleRoutes = [
         path: '/student-attendance',
         route: studentAttendanceRoutes,
     },
-    // {
-    //     path: '/confirm',
-    //     route: SeminarConfirmation,
-    // },
+    {
+        path: '/seminar-confirmations', // NEW ROUTE
+        route: SeminarConfirmationRoutes,
+    },
 ];
 
 moduleRoutes.forEach((route) => router.use(route.path, route.route));
