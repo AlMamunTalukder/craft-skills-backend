@@ -25,7 +25,12 @@ const app: Application = express();
 app.use(morgan('dev'));
 app.use(
     cors({
-        origin: ['http://localhost:3000', 'http://localhost:5173'],
+        origin: [
+            'http://localhost:3000',
+            'http://localhost:5173',
+            'https://client.craftskillsbd.com',
+            'https://craftskillsbd.com',
+        ],
         methods: 'GET,HEAD,PUT,PATCH,POST,DELETE',
         credentials: true,
     }),
