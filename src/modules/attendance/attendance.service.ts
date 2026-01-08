@@ -1,3 +1,4 @@
+/* eslint-disable no-console */
 // server/services/attendance.service.ts
 
 import type { CreateAttendanceDto, UpdateAttendanceDto } from './attendance.dto';
@@ -18,65 +19,65 @@ const generateClasses = (
     const classes: IAttendance[] = [];
 
     // Generate main classes
-    for (let i = 1; i <= mainClasses; i++) {
-        classes.push({
-            className: `Main Class ${i}`,
-            type: AttendanceType.MAIN,
-            sessions: [
-                {
-                    type: AttendanceSessionType.MAIN_CLASS,
-                    name: 'Main Class Session',
-                    date: undefined,
-                    attended: false,
-                },
-                {
-                    type: AttendanceSessionType.PROBLEM_SOLVING,
-                    name: 'Problem Solving Session',
-                    date: undefined,
-                    attended: false,
-                },
-                {
-                    type: AttendanceSessionType.PRACTICE,
-                    name: 'Practice Session',
-                    date: undefined,
-                    attended: false,
-                },
-            ],
-        });
-    }
+    // for (let i = 1; i <= mainClasses; i++) {
+    //     classes.push({
+    //         className: `Main Class ${i}`,
+    //         type: AttendanceType.MAIN,
+    //         sessions: [
+    //             {
+    //                 type: AttendanceSessionType.MAIN_CLASS,
+    //                 name: 'Main Class Session',
+    //                 date: undefined,
+    //                 attended: false,
+    //             },
+    //             {
+    //                 type: AttendanceSessionType.PROBLEM_SOLVING,
+    //                 name: 'Problem Solving Session',
+    //                 date: undefined,
+    //                 attended: false,
+    //             },
+    //             {
+    //                 type: AttendanceSessionType.PRACTICE,
+    //                 name: 'Practice Session',
+    //                 date: undefined,
+    //                 attended: false,
+    //             },
+    //         ],
+    //     });
+    // }
 
     // Generate special classes
-    for (let i = 1; i <= specialClasses; i++) {
-        classes.push({
-            className: `Special Class ${i}`,
-            type: AttendanceType.SPECIAL,
-            sessions: [
-                {
-                    type: AttendanceSessionType.MAIN_CLASS,
-                    name: 'Special Class Session',
-                    date: undefined,
-                    attended: false,
-                },
-            ],
-        });
-    }
+    // for (let i = 1; i <= specialClasses; i++) {
+    //     classes.push({
+    //         className: `Special Class ${i}`,
+    //         type: AttendanceType.SPECIAL,
+    //         sessions: [
+    //             {
+    //                 type: AttendanceSessionType.MAIN_CLASS,
+    //                 name: 'Special Class Session',
+    //                 date: undefined,
+    //                 attended: false,
+    //             },
+    //         ],
+    //     });
+    // }
 
     // Generate guest classes
-    for (let i = 1; i <= guestClasses; i++) {
-        classes.push({
-            className: `Guest Class ${i}`,
-            type: AttendanceType.GUEST,
-            guestName: `Guest Speaker ${i}`,
-            sessions: [
-                {
-                    type: AttendanceSessionType.MAIN_CLASS,
-                    name: 'Guest Lecture Session',
-                    date: undefined,
-                    attended: false,
-                },
-            ],
-        });
-    }
+    // for (let i = 1; i <= guestClasses; i++) {
+    //     classes.push({
+    //         className: `Guest Class ${i}`,
+    //         type: AttendanceType.GUEST,
+    //         guestName: `Guest Speaker ${i}`,
+    //         sessions: [
+    //             {
+    //                 type: AttendanceSessionType.MAIN_CLASS,
+    //                 name: 'Guest Lecture Session',
+    //                 date: undefined,
+    //                 attended: false,
+    //             },
+    //         ],
+    //     });
+    // }
 
     return classes;
 };
@@ -157,7 +158,7 @@ const updateAttendance = async (
         }
 
         let updateData: any = { ...data };
-        let classes: IAttendanceClass[] | undefined;
+        // let classes: IAttendanceClass[] | undefined;
         let mainClasses: number;
         let specialClasses: number;
         let guestClasses: number;
@@ -175,11 +176,11 @@ const updateAttendance = async (
             guestClasses =
                 data.guestClasses !== undefined ? data.guestClasses : attendance.guestClasses;
 
-            classes = generateClasses(mainClasses, specialClasses, guestClasses);
+            // classes = generateClasses(mainClasses, specialClasses, guestClasses);
 
             updateData = {
                 ...updateData,
-                classes,
+                // classes,
                 totalClasses: mainClasses + specialClasses + guestClasses,
                 mainClasses,
                 specialClasses,

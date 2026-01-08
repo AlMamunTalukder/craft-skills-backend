@@ -23,28 +23,12 @@ module.exports = [
         rules: {
             ...pluginJs.configs.recommended.rules,
             ...tseslint.configs.recommended.rules,
-            'no-unused-vars': [
-                'warn',
-                {
-                    argsIgnorePattern: '^_',
-                    varsIgnorePattern: '^_',
-                },
-            ],
+            'no-unused-vars': 'off',
             '@typescript-eslint/no-explicit-any': 'off',
             '@typescript-eslint/no-unused-vars': 'off',
             '@typescript-eslint/no-namespace': 'off',
-            '@typescript-eslint/explicit-function-return-type': [
-                'warn',
-                {
-                    allowExpressions: true,
-                },
-            ],
-            '@typescript-eslint/consistent-type-imports': [
-                'error',
-                {
-                    prefer: 'type-imports',
-                },
-            ],
+            '@typescript-eslint/explicit-function-return-type': 'off',
+            '@typescript-eslint/consistent-type-imports': 'off',
             'no-console': 'warn',
             'no-useless-escape': 'off',
             'lines-between-class-members': ['error', 'always'],

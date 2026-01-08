@@ -25,7 +25,7 @@ const getSiteData = async (): Promise<ISite | null> => {
 const updateSiteData = async (data: SiteDto): Promise<ISite | null> => {
     const updatedSite = await Site.findOneAndUpdate({}, data, { new: true });
 
-    console.log('Updated site:', updatedSite);
+    // console.log('Updated site:', updatedSite);
 
     if (updatedSite) {
         await redisClient.set(CACHE_KEY, JSON.stringify(updatedSite));

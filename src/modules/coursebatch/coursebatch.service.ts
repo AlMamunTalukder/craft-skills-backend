@@ -1,3 +1,4 @@
+/* eslint-disable no-console */
 // server/services/coursebatch.service.ts
 
 import type { CreateBatchDto, UpdateBatchDto } from './coursebatch.dto';

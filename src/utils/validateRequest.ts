@@ -1,4 +1,3 @@
-/* eslint-disable @typescript-eslint/consistent-type-imports */
 import type { NextFunction, Request, Response } from 'express';
 import { ZodTypeAny } from 'zod';
 

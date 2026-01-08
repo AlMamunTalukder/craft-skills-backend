@@ -14,21 +14,21 @@ const getAllSeminars = async (): Promise<ISeminar[]> => {
 // Also check your createSeminar function
 const createSeminar = async (seminarData: Partial<ISeminar>): Promise<ISeminar> => {
     try {
-        console.log('Creating seminar with data:', seminarData);
+        // console.log('Creating seminar with data:', seminarData);
 
         const seminar = new Seminar(seminarData);
         await seminar.save();
 
-        console.log('Seminar created successfully with ID:', seminar._id);
+        // console.log('Seminar created successfully with ID:', seminar._id);
         return seminar;
     } catch (error: any) {
-        console.error('Error creating seminar:', error);
-        console.error('Error details:', {
-            message: error.message,
-            name: error.name,
-            code: error.code,
-            validationErrors: error.errors,
-        });
+        // console.error('Error creating seminar:', error);
+        // console.error('Error details:', {
+        //     message: error.message,
+        //     name: error.name,
+        //     code: error.code,
+        //     validationErrors: error.errors,
+        // });
         throw new AppError(400, 'Validation failed: ' + error.message);
     }
 };
@@ -83,7 +83,7 @@ const getActiveSeminar = async (): Promise<ISeminar | null> => {
 
         return seminar;
     } catch (error: any) {
-        console.error('Database error in getActiveSeminar:', error);
+        // console.error('Database error in getActiveSeminar:', error);
         return null;
     }
 };

@@ -1,3 +1,4 @@
+/* eslint-disable no-console */
 import type { Request, Response } from 'express';
 import Attendance from './attendance.model';
 

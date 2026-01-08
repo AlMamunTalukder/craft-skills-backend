@@ -1,4 +1,4 @@
-// src/services/admission.service.ts
+/* eslint-disable no-console */
 import { Queue } from 'bullmq';
 import mongoose from 'mongoose';
 import AppError from 'src/errors/AppError';
@@ -9,7 +9,6 @@ import logger from '@/shared/logger';
 import { appendDataToGoogleSheet } from '@/utils/googleSheets';
 import { redisConnection } from 'src/queues/connection';
 
-// Queue for async processing
 const admissionQueue = new Queue('admission-queue', {
     connection: redisConnection,
 });

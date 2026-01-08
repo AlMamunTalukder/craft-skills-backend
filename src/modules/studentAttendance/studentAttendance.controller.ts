@@ -1,4 +1,3 @@
-// src/modules/studentAttendance/studentAttendance.controller.ts
 import type { Request, Response } from 'express';
 import mongoose from 'mongoose';
 import User from '../user/user.model';
@@ -429,7 +428,7 @@ export const studentAttendanceController = {
                 data: updatedStats,
             });
         } catch (error: any) {
-            console.error('Update guest class error:', error);
+            // console.error('Update guest class error:', error);
 
             if (error.code === 11000) {
                 return res.status(400).json({

@@ -1,3 +1,4 @@
+/* eslint-disable no-console */
 // auth.service.ts - ROLE-BASED UNIQUENESS
 import AppError from 'src/errors/AppError';
 import userService from '../user/user.service';

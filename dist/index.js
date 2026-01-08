@@ -18,6 +18,9 @@ const passport_1 = __importDefault(require("passport"));
 const notFound_1 = __importDefault(require("./routes/notFound"));
 const connect_mongo_1 = __importDefault(require("connect-mongo"));
 const redis_1 = require("./config/redis");
+require("./workers/participant.worker");
+require("./workers/admission.worker");
+require("./workers/seminar-confirmation.worker");
 (0, globalErrorHandlers_1.default)();
 const app = (0, express_1.default)();
 app.use((0, morgan_1.default)('dev'));
@@ -35,8 +38,10 @@ app.use((0, express_session_1.default)({
     saveUninitialized: false,
     store: connect_mongo_1.default.create({ mongoUrl: index_2.default.databaseUrl }),
     cookie: {
-        secure: false, // keep false for local dev
-        maxAge: 24 * 60 * 60 * 1000, // 24 hours
+        httpOnly: true,
+        secure: index_2.default.env === 'production',
+        sameSite: 'lax', // 🔥 REQUIRED
+        maxAge: 24 * 60 * 60 * 1000,
     },
 }));
 app.use(passport_1.default.initialize());

@@ -1,6 +1,6 @@
 // server/services/course.service.ts
 
-import { Course, type ICourse } from "./course.model";
+import { Course, type ICourse } from './course.model';
 
 const getAllCourses = async (): Promise<ICourse[]> => {
     const courses = await Course.find()
