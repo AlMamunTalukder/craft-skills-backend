@@ -22,13 +22,6 @@ const createSeminar = async (seminarData: Partial<ISeminar>): Promise<ISeminar> 
         // console.log('Seminar created successfully with ID:', seminar._id);
         return seminar;
     } catch (error: any) {
-        // console.error('Error creating seminar:', error);
-        // console.error('Error details:', {
-        //     message: error.message,
-        //     name: error.name,
-        //     code: error.code,
-        //     validationErrors: error.errors,
-        // });
         throw new AppError(400, 'Validation failed: ' + error.message);
     }
 };

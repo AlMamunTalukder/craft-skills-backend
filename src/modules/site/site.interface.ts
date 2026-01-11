@@ -45,4 +45,5 @@ export interface ISite extends Document {
     admissionHeaderTitle?: string;
     admissionHeaderDescription?: string;
     admissionDeadline?: Date;
+    showPdfMenu?: boolean;
 }

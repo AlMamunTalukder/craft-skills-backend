@@ -18,7 +18,7 @@ export const createSeminarDto = z.object({
             message: 'Invalid date format',
         }),
     isActive: z.boolean().optional().default(true),
-    link: z.string().url().optional().or(z.literal('')),
+    // link: z.string().url().optional().or(z.literal('')),
     facebookSecretGroup: z.string().url().optional().or(z.literal('')),
     whatsappSecretGroup: z.string().url().optional().or(z.literal('')),
     messengerSecretGroup: z.string().url().optional().or(z.literal('')),

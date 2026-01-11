@@ -18,7 +18,7 @@ export interface ISeminar extends Document {
     date: Date;
     registrationDeadline: Date;
     isActive: boolean;
-    link?: string;
+    // link?: string;
     createdAt: Date;
     updatedAt: Date;
 

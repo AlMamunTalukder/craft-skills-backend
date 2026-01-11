@@ -47,6 +47,7 @@ export const siteDto = z.object({
     totalCourses: z.number().optional(),
     totalBatches: z.number().optional(),
     successRate: z.number().optional(),
+    showPdfMenu: z.boolean().optional(),    
 });
 
 export type SiteDto = z.infer<typeof siteDto>;

@@ -24,7 +24,34 @@ const updateSiteData = catchAsync(async (req, res) => {
     });
 });
 
+const updatePdfSettings = catchAsync(async (req, res) => {
+    const { showPdfMenu } = req.body;
+
+    // Get current site data
+    let siteData = await siteService.getSiteData();
+
+    if (!siteData) {
+        throw new Error('Site data not found');
+    }
+
+    // Update only the PDF settings
+    const updatedData = {
+        ...siteData.toObject(),
+        showPdfMenu,
+    };
+
+    const result = await siteService.updateSiteData(updatedData);
+
+    sendResponse(res, {
+        statusCode: 200,
+        success: true,
+        message: 'PDF settings updated successfully',
+        data: result,
+    });
+});
+
 export const siteController = {
     updateSiteData,
     getSiteData,
+    updatePdfSettings,
 };

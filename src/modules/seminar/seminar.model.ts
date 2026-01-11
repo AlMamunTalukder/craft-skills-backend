@@ -53,7 +53,7 @@ const SeminarSchema = new Schema<ISeminar>(
         date: { type: Date, required: true },
         registrationDeadline: { type: Date, required: true },
         isActive: { type: Boolean, default: true },
-        link: { type: String },
+        // link: { type: String },
         facebookSecretGroup: { type: String },
         whatsappSecretGroup: { type: String },
         messengerSecretGroup: { type: String },

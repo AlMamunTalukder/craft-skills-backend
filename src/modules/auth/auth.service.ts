@@ -11,7 +11,7 @@ import User from '../user/user.model';
 import { Admission } from '../admission/admission.model';
 
 const register = async (data: IRegisterDto): Promise<IUser> => {
-    console.log('=== STUDENT REGISTRATION ===');
+    // console.log('=== STUDENT REGISTRATION ===');
 
     // 1. Check if batch exists
     const batch = await CourseBatch.findOne({
@@ -66,11 +66,11 @@ const register = async (data: IRegisterDto): Promise<IUser> => {
             role: IUserRole._STUDENT, // Only check student role
         });
 
-        console.log('Student check by email:', {
-            email,
-            found: !!existingStudent,
-            role: existingStudent?.role,
-        });
+        // console.log('Student check by email:', {
+        //     email,
+        //     found: !!existingStudent,
+        //     role: existingStudent?.role,
+        // });
     }
 
     if (data.phone && data.phone.trim() !== '') {
@@ -82,11 +82,11 @@ const register = async (data: IRegisterDto): Promise<IUser> => {
             role: IUserRole._STUDENT, // Only check student role
         });
 
-        console.log('Student check by phone:', {
-            phone,
-            found: !!existingStudent,
-            role: existingStudent?.role,
-        });
+        // console.log('Student check by phone:', {
+        //     phone,
+        //     found: !!existingStudent,
+        //     role: existingStudent?.role,
+        // });
     }
 
     if (existingStudent) {
@@ -156,7 +156,7 @@ const register = async (data: IRegisterDto): Promise<IUser> => {
         }
     }
 
-    console.log('Creating student with data:', userData);
+    // console.log('Creating student with data:', userData);
 
     // 7. Create student
     try {
