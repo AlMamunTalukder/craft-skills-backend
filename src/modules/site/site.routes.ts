@@ -5,7 +5,6 @@ import { siteDto } from './site.dto';
 import { auth } from 'src/middleware/auth';
 import { pdfSettingsDto } from './pdf-settings.dto';
 
-
 const siteRoutes = Router();
 
 siteRoutes.get('/', siteController.getSiteData);
@@ -14,6 +13,6 @@ siteRoutes.put(
     '/pdf-settings',
     auth(['admin']),
     validateRequest(pdfSettingsDto),
-    siteController.updatePdfSettings
+    siteController.updatePdfSettings,
 );
 export default siteRoutes;
