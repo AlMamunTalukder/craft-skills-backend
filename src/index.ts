@@ -30,6 +30,7 @@ app.use(
             'http://localhost:5173',
             'https://client.craftskillsbd.com',
             'https://craftskillsbd.com',
+            'https://admin.craftskillsbd.com',
         ],
         methods: 'GET,HEAD,PUT,PATCH,POST,DELETE',
         credentials: true,
