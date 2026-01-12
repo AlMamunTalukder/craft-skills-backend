@@ -1,5 +1,4 @@
-/* eslint-disable no-console */
-// server/services/attendance.service.ts
+// server/services/attendance.service.ts - Simplified version
 
 import type { CreateAttendanceDto, UpdateAttendanceDto } from './attendance.dto';
 import type { IAttendance } from './attendance.model';
@@ -17,81 +16,18 @@ const generateClasses = (
     guestClasses: number,
 ): IAttendance[] => {
     const classes: IAttendance[] = [];
-
-    // Generate main classes
-    // for (let i = 1; i <= mainClasses; i++) {
-    //     classes.push({
-    //         className: `Main Class ${i}`,
-    //         type: AttendanceType.MAIN,
-    //         sessions: [
-    //             {
-    //                 type: AttendanceSessionType.MAIN_CLASS,
-    //                 name: 'Main Class Session',
-    //                 date: undefined,
-    //                 attended: false,
-    //             },
-    //             {
-    //                 type: AttendanceSessionType.PROBLEM_SOLVING,
-    //                 name: 'Problem Solving Session',
-    //                 date: undefined,
-    //                 attended: false,
-    //             },
-    //             {
-    //                 type: AttendanceSessionType.PRACTICE,
-    //                 name: 'Practice Session',
-    //                 date: undefined,
-    //                 attended: false,
-    //             },
-    //         ],
-    //     });
-    // }
-
-    // Generate special classes
-    // for (let i = 1; i <= specialClasses; i++) {
-    //     classes.push({
-    //         className: `Special Class ${i}`,
-    //         type: AttendanceType.SPECIAL,
-    //         sessions: [
-    //             {
-    //                 type: AttendanceSessionType.MAIN_CLASS,
-    //                 name: 'Special Class Session',
-    //                 date: undefined,
-    //                 attended: false,
-    //             },
-    //         ],
-    //     });
-    // }
-
-    // Generate guest classes
-    // for (let i = 1; i <= guestClasses; i++) {
-    //     classes.push({
-    //         className: `Guest Class ${i}`,
-    //         type: AttendanceType.GUEST,
-    //         guestName: `Guest Speaker ${i}`,
-    //         sessions: [
-    //             {
-    //                 type: AttendanceSessionType.MAIN_CLASS,
-    //                 name: 'Guest Lecture Session',
-    //                 date: undefined,
-    //                 attended: false,
-    //             },
-    //         ],
-    //     });
-    // }
-
+    // Add your class generation logic here
     return classes;
 };
 
-// Get all attendance routines
+// Get all attendance records
 const getAllAttendances = async (): Promise<LeanAttendance[]> => {
     try {
         const attendances = await Attendance.find().sort({ createdAt: -1 }).lean().exec();
-
-        // Cast to LeanAttendance type
         return attendances as unknown as LeanAttendance[];
     } catch (error) {
-        console.error('Error fetching attendances:', error);
-        throw new Error('Failed to fetch attendance routines');
+        // console.error('Error fetching attendances:', error);
+        throw new Error('Failed to fetch attendance records');
     }
 };
 
@@ -99,20 +35,17 @@ const getAllAttendances = async (): Promise<LeanAttendance[]> => {
 const getAttendanceById = async (id: string): Promise<LeanAttendance | null> => {
     try {
         const attendance = await Attendance.findById(id).lean().exec();
-
         if (!attendance) {
             return null;
         }
-
-        // Cast to LeanAttendance type
         return attendance as unknown as LeanAttendance;
     } catch (error) {
-        console.error('Error fetching attendance by ID:', error);
-        throw new Error('Failed to fetch attendance routine');
+        // console.error('Error fetching attendance by ID:', error);
+        throw new Error('Failed to fetch attendance record');
     }
 };
 
-// Create attendance routine
+// Create attendance record
 const createAttendance = async (data: CreateAttendanceDto): Promise<LeanAttendance> => {
     try {
         const { mainClasses, specialClasses, guestClasses, ...rest } = data;
@@ -133,19 +66,15 @@ const createAttendance = async (data: CreateAttendanceDto): Promise<LeanAttendan
         });
 
         const savedAttendance = await attendance.save();
-
-        // Convert to plain object
         const attendanceObj = savedAttendance.toObject();
-
-        // Cast to LeanAttendance type
         return attendanceObj as unknown as LeanAttendance;
     } catch (error) {
-        console.error('Error creating attendance:', error);
-        throw new Error('Failed to create attendance routine');
+        // console.error('Error creating attendance:', error);
+        throw new Error('Failed to create attendance record');
     }
 };
 
-// Update attendance routine
+// Update attendance record
 const updateAttendance = async (
     id: string,
     data: UpdateAttendanceDto,
@@ -158,7 +87,6 @@ const updateAttendance = async (
         }
 
         let updateData: any = { ...data };
-        // let classes: IAttendanceClass[] | undefined;
         let mainClasses: number;
         let specialClasses: number;
         let guestClasses: number;
@@ -176,11 +104,8 @@ const updateAttendance = async (
             guestClasses =
                 data.guestClasses !== undefined ? data.guestClasses : attendance.guestClasses;
 
-            // classes = generateClasses(mainClasses, specialClasses, guestClasses);
-
             updateData = {
                 ...updateData,
-                // classes,
                 totalClasses: mainClasses + specialClasses + guestClasses,
                 mainClasses,
                 specialClasses,
@@ -199,15 +124,14 @@ const updateAttendance = async (
             return null;
         }
 
-        // Cast to LeanAttendance type
         return updatedAttendance as unknown as LeanAttendance;
     } catch (error) {
-        console.error('Error updating attendance:', error);
-        throw new Error('Failed to update attendance routine');
+        // console.error('Error updating attendance:', error);
+        throw new Error('Failed to update attendance record');
     }
 };
 
-// Delete attendance routine
+// Delete attendance record
 const deleteAttendance = async (id: string): Promise<void> => {
     try {
         const attendance = await Attendance.findByIdAndDelete(id).exec();
@@ -216,8 +140,8 @@ const deleteAttendance = async (id: string): Promise<void> => {
             throw new Error('Attendance not found');
         }
     } catch (error) {
-        console.error('Error deleting attendance:', error);
-        throw new Error('Failed to delete attendance routine');
+        // console.error('Error deleting attendance:', error);
+        throw new Error('Failed to delete attendance record');
     }
 };
 
@@ -235,10 +159,9 @@ const updateAttendanceStatus = async (
             return null;
         }
 
-        // Cast to LeanAttendance type
         return attendance as unknown as LeanAttendance;
     } catch (error) {
-        console.error('Error updating attendance status:', error);
+        // console.error('Error updating attendance status:', error);
         throw new Error('Failed to update attendance status');
     }
 };
@@ -250,8 +173,8 @@ const getAttendanceStats = async () => {
             {
                 $group: {
                     _id: null,
-                    totalRoutines: { $sum: 1 },
-                    activeRoutines: { $sum: { $cond: [{ $eq: ['$isActive', true] }, 1, 0] } },
+                    totalRecords: { $sum: 1 },
+                    activeRecords: { $sum: { $cond: [{ $eq: ['$isActive', true] }, 1, 0] } },
                     totalClasses: { $sum: '$totalClasses' },
                     totalMainClasses: { $sum: '$mainClasses' },
                     totalSpecialClasses: { $sum: '$specialClasses' },
@@ -261,9 +184,9 @@ const getAttendanceStats = async () => {
             {
                 $project: {
                     _id: 0,
-                    totalRoutines: 1,
-                    activeRoutines: 1,
-                    inactiveRoutines: { $subtract: ['$totalRoutines', '$activeRoutines'] },
+                    totalRecords: 1,
+                    activeRecords: 1,
+                    inactiveRecords: { $subtract: ['$totalRecords', '$activeRecords'] },
                     totalClasses: 1,
                     totalMainClasses: 1,
                     totalSpecialClasses: 1,
@@ -274,9 +197,9 @@ const getAttendanceStats = async () => {
 
         return (
             stats[0] || {
-                totalRoutines: 0,
-                activeRoutines: 0,
-                inactiveRoutines: 0,
+                totalRecords: 0,
+                activeRecords: 0,
+                inactiveRecords: 0,
                 totalClasses: 0,
                 totalMainClasses: 0,
                 totalSpecialClasses: 0,
@@ -284,7 +207,7 @@ const getAttendanceStats = async () => {
             }
         );
     } catch (error) {
-        console.error('Error fetching attendance stats:', error);
+        // console.error('Error fetching attendance stats:', error);
         throw new Error('Failed to fetch attendance statistics');
     }
 };

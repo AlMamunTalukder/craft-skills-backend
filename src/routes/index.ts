@@ -84,7 +84,7 @@ const moduleRoutes = [
         route: uploadRoutes,
     },
     {
-        path: '/attendance',
+        path: '/attendances',
         route: attendanceRoutes,
     },
     {
@@ -92,7 +92,7 @@ const moduleRoutes = [
         route: studentAttendanceRoutes,
     },
     {
-        path: '/seminar-confirmations', // NEW ROUTE
+        path: '/seminar-confirmations',
         route: SeminarConfirmationRoutes,
     },
 ];
