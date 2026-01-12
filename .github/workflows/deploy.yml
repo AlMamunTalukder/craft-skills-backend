@@ -1,0 +1,54 @@
+name: Node.js Deployment with NGINX and SSL
+
+on:
+  push:
+    branches: [main]
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Install SSH Client
+        run: sudo apt-get update && sudo apt-get install -y openssh-client
+
+      - name: Deploy to VPS using SSH
+        uses: appleboy/ssh-action@master
+        with:
+          host: ${{ secrets.HOST }}
+          username: ${{ secrets.USERNAME }}
+          key: ${{ secrets.PRIVATE_KEY }}
+          port: ${{ secrets.PORT }}
+          script: |
+            echo "Starting deployment to VPS..."
+
+            cd /var/www/html/craft/server || exit
+
+            if ! command -v git &> /dev/null; then
+              echo "Git is not installed. Please install Git."
+              exit 1
+            fi
+
+            git fetch --all
+            git reset --hard origin/main
+
+            if [ ! -f .env ]; then
+              cp .env.example .env
+            fi
+
+            npm install
+            npm run build
+
+            if command -v pm2 &> /dev/null; then
+              pm2 restart skills-server || pm2 start npm --name "skills-server" -- run start
+              pm2 save
+            else
+              echo "PM2 not found. Please install it using 'npm install -g pm2'."
+              exit 1
+            fi
+
+            sudo systemctl restart nginx
+            echo "Deployment completed successfully!"
