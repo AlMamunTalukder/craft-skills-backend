@@ -25,5 +25,6 @@ userRoutes.put(
     validateRequest(resetPasswordDto),
     userController.resetUserPassword,
 );
+userRoutes.get('/my-batches', auth(), userController.getMyBatches);
 
 export default userRoutes;
