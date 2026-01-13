@@ -27,26 +27,34 @@ const findUserByEmailOrPhone = async (identifier: string): Promise<IUser | null>
 };
 
 const createUser = async (data: Partial<IUser>): Promise<IUser> => {
-    // Ensure required fields have defaults
+    // Default role to student if not provided
+    const role = data.role || IUserRole._STUDENT;
+
+    // Prepare user data
     const userData: any = {
         ...data,
-        role: data.role || IUserRole._STUDENT,
+        role,
         status: data.status || IUserStatus._ACTIVE,
     };
 
-    // Make sure name is provided
-    if (!userData.name) {
-        throw new Error('Name is required');
+    // Ensure name exists
+    if (!userData.name) throw new Error('Name is required');
+
+    // Optional fields
+    if (!userData.email) userData.email = undefined;
+    if (!userData.phone) userData.phone = undefined;
+
+    // TEACHER SPECIAL HANDLING
+    if (role === IUserRole._TEACHER) {
+        // Use `validateBeforeSave: false` to skip Mongoose required validation
+        const teacher = new User(userData);
+        return await teacher.save({ validateBeforeSave: false });
     }
 
-    // Ensure undefined for empty optional fields
-    if (!userData.email) {
-        userData.email = undefined;
-    }
-
-    if (!userData.phone) {
-        userData.phone = undefined;
-    }
+    // For students/admins, enforce required fields
+    if (!userData.batchNumber) throw new Error('batchNumber is required for students/admins');
+    if (!userData.batchId) throw new Error('batchId is required for students/admins');
+    if (!userData.admissionId) throw new Error('admissionId is required for students/admins');
 
     return await User.create(userData);
 };

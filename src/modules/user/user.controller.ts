@@ -65,15 +65,6 @@ const getUserById = catchAsync(async (req: Request, res: Response): Promise<void
     const { id } = req.params;
     const result = await userService.getUserById(id);
 
-    // if (!result) {
-    //     sendResponse(res, {
-    //         statusCode: 404,
-    //         success: false,
-    //         message: 'User not found',
-    //     });
-    //     return;
-    // }
-
     sendResponse(res, {
         statusCode: 200,
         success: true,
@@ -85,12 +76,6 @@ const getUserById = catchAsync(async (req: Request, res: Response): Promise<void
 const deleteUser = catchAsync(async (req: Request, res: Response): Promise<void> => {
     const { id } = req.params;
     await userService.deleteUser(id);
-
-    // sendResponse(res, {
-    //     statusCode: 200,
-    //     success: true,
-    //     message: 'User deleted successfully',
-    // });
 });
 
 const updateUserStatus = catchAsync(async (req: Request, res: Response): Promise<void> => {
@@ -98,11 +83,6 @@ const updateUserStatus = catchAsync(async (req: Request, res: Response): Promise
     const { status } = req.body;
 
     if (!status || !['active', 'inactive', 'banned'].includes(status)) {
-        // sendResponse(res, {
-        //     statusCode: 400,
-        //     success: false,
-        //     message: 'Invalid status value',
-        // });
         return;
     }
 
@@ -120,11 +100,6 @@ const resetUserPassword = catchAsync(async (req: Request, res: Response): Promis
     const { password } = req.body;
 
     await userService.resetUserPassword(id, password);
-    // sendResponse(res, {
-    //     statusCode: 200,
-    //     success: true,
-    //     message: 'Password reset successfully',
-    // });
 });
 
 const getUserStats = catchAsync(async (req: Request, res: Response): Promise<void> => {

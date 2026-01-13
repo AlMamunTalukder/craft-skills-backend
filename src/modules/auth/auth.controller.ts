@@ -48,7 +48,7 @@ const logout = catchAsync((req: Request, res: Response, next: NextFunction) => {
             if (err) {
                 return next(err);
             }
-            res.clearCookie('connect.sid'); // Example cookie name
+            res.clearCookie('connect.sid');
             res.redirect('/');
         });
     });

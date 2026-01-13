@@ -4,16 +4,10 @@ import { phoneRegex } from '../auth/auth.dto';
 
 export const createUserDto = z
     .object({
-        firstName: z
+        name: z
             .string({})
-            .min(1, 'First name is required')
-            .max(50, 'First name must not exceed 50 characters')
-            .trim(),
-
-        lastName: z
-            .string({})
-            .min(1, 'Last name is required')
-            .max(50, 'Last name must not exceed 50 characters')
+            .min(1, 'Name is required')
+            .max(50, 'Name must not exceed 50 characters')
             .trim(),
 
         password: z
