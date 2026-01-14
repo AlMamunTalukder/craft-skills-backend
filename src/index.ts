@@ -49,7 +49,7 @@ app.use(
         cookie: {
             httpOnly: true,
             secure: config.env === 'production',
-            sameSite: 'lax', // 🔥 REQUIRED
+            sameSite: config.env === 'production' ? 'none' : 'lax', // 🔥 REQUIRED
             maxAge: 24 * 60 * 60 * 1000,
         },
     }),
