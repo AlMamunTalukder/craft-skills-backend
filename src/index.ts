@@ -118,7 +118,7 @@ app.use(
             'https://www.craftskillsbd.com',
             'https://admin.craftskillsbd.com',
         ],
-        methods: ['GET', 'HEAD', 'PUT', 'PATCH', 'POST', 'DELETE', 'OPTIONS'],
+        methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
         credentials: true,
         allowedHeaders: ['Content-Type', 'Authorization', 'Cookie', 'X-Requested-With'],
         exposedHeaders: ['set-cookie'],
@@ -135,20 +135,17 @@ app.use(
         secret: config.sessionSecret,
         resave: false,
         saveUninitialized: false,
-        store: MongoStore.create({
-            mongoUrl: config.databaseUrl,
-            ttl: 24 * 60 * 60, // 24 hours
-        }),
-        name: 'craftskills.session', // Custom session cookie name
+        store: MongoStore.create({ mongoUrl: config.databaseUrl, ttl: 24 * 60 * 60 }),
+        name: 'craftskills.session',
         cookie: {
             httpOnly: true,
             secure: config.env === 'production',
-            sameSite: config.env === 'production' ? 'none' : 'lax', // 🔥 REQUIRED
+            sameSite: config.env === 'production' ? 'none' : 'lax',
             maxAge: 24 * 60 * 60 * 1000,
-            domain: config.env === 'production' ? '.craftskillsbd.com' : undefined, // Important for subdomains
+            domain: config.env === 'production' ? '.craftskillsbd.com' : undefined,
             path: '/',
         },
-        proxy: config.env === 'production', // Trust proxy in production
+        proxy: config.env === 'production', // trust X-Forwarded-For headers
     }),
 );
 
@@ -177,7 +174,7 @@ app.use(passport.session());
 app.use('/api/v1', routes);
 
 // Add debug endpoint
-app.get('/api/v1/debug/session', (req: Request, res: Response) => {
+app.get('/api/v1/debug/session', (req, res) => {
     res.json({
         sessionId: req.sessionID,
         authenticated: req.isAuthenticated ? req.isAuthenticated() : false,

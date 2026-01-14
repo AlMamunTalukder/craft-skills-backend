@@ -53,7 +53,7 @@ app.use((0, cors_1.default)({
         'https://www.craftskillsbd.com',
         'https://admin.craftskillsbd.com',
     ],
-    methods: ['GET', 'HEAD', 'PUT', 'PATCH', 'POST', 'DELETE', 'OPTIONS'],
+    methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
     credentials: true,
     allowedHeaders: ['Content-Type', 'Authorization', 'Cookie', 'X-Requested-With'],
     exposedHeaders: ['set-cookie'],
@@ -66,20 +66,17 @@ app.use((0, express_session_1.default)({
     secret: index_2.default.sessionSecret,
     resave: false,
     saveUninitialized: false,
-    store: connect_mongo_1.default.create({
-        mongoUrl: index_2.default.databaseUrl,
-        ttl: 24 * 60 * 60, // 24 hours
-    }),
-    name: 'craftskills.session', // Custom session cookie name
+    store: connect_mongo_1.default.create({ mongoUrl: index_2.default.databaseUrl, ttl: 24 * 60 * 60 }),
+    name: 'craftskills.session',
     cookie: {
         httpOnly: true,
         secure: index_2.default.env === 'production',
-        sameSite: index_2.default.env === 'production' ? 'none' : 'lax', // 🔥 REQUIRED
+        sameSite: index_2.default.env === 'production' ? 'none' : 'lax',
         maxAge: 24 * 60 * 60 * 1000,
-        domain: index_2.default.env === 'production' ? '.craftskillsbd.com' : undefined, // Important for subdomains
+        domain: index_2.default.env === 'production' ? '.craftskillsbd.com' : undefined,
         path: '/',
     },
-    proxy: index_2.default.env === 'production', // Trust proxy in production
+    proxy: index_2.default.env === 'production', // trust X-Forwarded-For headers
 }));
 // Trust proxy in production
 if (index_2.default.env === 'production') {
