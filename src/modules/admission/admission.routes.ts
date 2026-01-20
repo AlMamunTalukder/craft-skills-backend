@@ -2,6 +2,7 @@ import { Router } from 'express';
 import { admissionController } from './admission.controller';
 import { createAdmissionDto, updateAdmissionDto } from './admission.dto';
 import validateRequest from 'src/utils/validateRequest';
+import { auth } from 'src/middleware/auth';
 
 const router = Router();
 
@@ -20,4 +21,7 @@ router.put('/:id/status', admissionController.updateStatus);
 router.put('/:id/payment-status', admissionController.updatePaymentStatus);
 router.delete('/:id', admissionController.deleteAdmission);
 
+router.put('/:id/result', auth(['admin', 'teacher']), admissionController.updateAdmissionResult);
+
+router.get('/student/result', auth(['student']), admissionController.getStudentAdmissionResult);
 export const AdmissionRoutes = router;

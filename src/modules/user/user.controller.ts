@@ -4,6 +4,8 @@ import catchAsync from 'src/utils/catchAsync';
 import sendResponse from 'src/utils/sendResponse';
 import type { IUser } from './user.interface';
 import userService from './user.service';
+import User from './user.model';
+import { AuthUser } from 'src/types/user.types';
 
 // Existing methods
 const profile = catchAsync(async (req: Request, res: Response): Promise<void> => {
@@ -112,29 +114,69 @@ const getUserStats = catchAsync(async (req: Request, res: Response): Promise<voi
     });
 });
 
+// const getMyBatches = catchAsync(async (req, res) => {
+
+//     const user = req.user as IUser;
+
+//     interface Batch {
+//         _id: string;
+//         batchNumber: string;
+//         name: string;
+//         isActive: boolean;
+//         admissionId?: string;
+//     }
+
+//     let batches: Batch[] = [];
+
+//     if (user.role === 'student') {
+//         // console.log('User is student, checking batch info...');
+
+//         if (!user.batchId || !user.admissionId || !user.batchNumber) {
+//             // console.log('Missing batch info:', {
+//             //     hasBatchId: !!user.batchId,
+//             //     hasAdmissionId: !!user.admissionId,
+//             //     hasBatchNumber: !!user.batchNumber,
+//             // });
+//             // Instead of throwing, return empty array
+//             // console.log('Returning empty batches array');
+//         } else {
+//             // console.log('Creating batch object...');
+//             batches = [
+//                 {
+//                     _id: user.batchId.toString(),
+//                     batchNumber: user.batchNumber,
+//                     name: `Batch ${user.batchNumber}`,
+//                     isActive: user.status === 'active',
+//                     admissionId: user.admissionId?.toString(),
+//                 },
+//             ];
+//         }
+//     } else if (user.role === 'teacher') {
+//         // console.log('User is teacher, returning empty batches');
+//         batches = [];
+//     }
+
+//     // console.log('Returning batches:', batches);
+
+//     sendResponse(res, {
+//         statusCode: 200,
+//         success: true,
+//         message: 'Batches fetched successfully',
+//         data: { batches },
+//     });
+// });
+
+// In user.controller.ts, update getMyBatches method
 const getMyBatches = catchAsync(async (req, res) => {
-    // console.log('=== getMyBatches Controller ===');
-    // console.log('Request user:', req.user);
-    // console.log('User type:', typeof req.user);
-    // console.log('User keys:', Object.keys(req.user || {}));
+    const user = req.user as AuthUser;
 
-    const user = req.user as IUser;
-
-    // Log all user properties
-    // console.log('User properties:');
-    for (const key in user) {
-        // console.log(`${key}:`, (user as any)[key]);
-    }
-
-    // console.log('BatchId exists:', !!user.batchId);
-    // console.log('BatchId type:', typeof user.batchId);
-    // console.log('BatchId value:', user.batchId);
-
-    // console.log('BatchNumber exists:', !!user.batchNumber);
-    // console.log('BatchNumber value:', user.batchNumber);
-
-    // console.log('AdmissionId exists:', !!user.admissionId);
-    // console.log('AdmissionId value:', user.admissionId);
+    // if (!user) {
+    //     return sendResponse(res, {
+    //         statusCode: 401,
+    //         success: false,
+    //         message: 'Unauthorized',
+    //     });
+    // }
 
     interface Batch {
         _id: string;
@@ -147,34 +189,39 @@ const getMyBatches = catchAsync(async (req, res) => {
     let batches: Batch[] = [];
 
     if (user.role === 'student') {
-        // console.log('User is student, checking batch info...');
+        // First, try to get user from database with admissionId
+        const userWithAdmission = await User.findById(user._id)
+            .select('batchNumber batchId admissionId status')
+            .populate('batchId', 'batchNumber name')
+            .populate('admissionId', '_id');
 
-        if (!user.batchId || !user.admissionId || !user.batchNumber) {
-            // console.log('Missing batch info:', {
-            //     hasBatchId: !!user.batchId,
-            //     hasAdmissionId: !!user.admissionId,
-            //     hasBatchNumber: !!user.batchNumber,
-            // });
-            // Instead of throwing, return empty array
-            // console.log('Returning empty batches array');
-        } else {
-            // console.log('Creating batch object...');
+        if (userWithAdmission) {
             batches = [
                 {
-                    _id: user.batchId.toString(),
-                    batchNumber: user.batchNumber,
-                    name: `Batch ${user.batchNumber}`,
+                    _id: userWithAdmission.batchId?._id?.toString() || user._id.toString(),
+                    batchNumber: userWithAdmission.batchNumber || 'N/A',
+                    name: `Batch ${userWithAdmission.batchNumber || 'N/A'}`,
+                    isActive: userWithAdmission.status === 'active',
+                    admissionId:
+                        userWithAdmission.admissionId?._id?.toString() ||
+                        userWithAdmission.admissionId?.toString(),
+                },
+            ];
+        } else {
+            // Fallback to using user data from request
+            batches = [
+                {
+                    _id: user.batchId?.toString() || user._id.toString(),
+                    batchNumber: user.batchNumber || 'N/A',
+                    name: `Batch ${user.batchNumber || 'N/A'}`,
                     isActive: user.status === 'active',
                     admissionId: user.admissionId?.toString(),
                 },
             ];
         }
-    } else if (user.role === 'teacher') {
-        // console.log('User is teacher, returning empty batches');
+    } else if (user.role === 'teacher' || user.role === 'admin') {
         batches = [];
     }
-
-    // console.log('Returning batches:', batches);
 
     sendResponse(res, {
         statusCode: 200,

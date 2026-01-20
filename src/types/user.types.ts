@@ -1,6 +1,5 @@
 // server/types/user.types.ts
 import type { Types } from 'mongoose';
-
 export interface PopulatedBatch {
     _id: Types.ObjectId;
     name: string;
@@ -31,4 +30,18 @@ export interface PopulatedUser {
     role: string;
     status: string;
     batches: UserBatch[];
+}
+
+export interface AuthUser {
+    _id: Types.ObjectId;
+    name: string;
+    email: string;
+    phone: string;
+    role: 'student' | 'teacher' | 'admin';
+    status: 'active' | 'inactive' | 'suspended';
+    batchNumber: string;
+    batchId?: Types.ObjectId;
+    admissionId?: Types.ObjectId;
+    createdAt?: Date;
+    updatedAt?: Date;
 }

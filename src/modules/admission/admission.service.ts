@@ -278,6 +278,7 @@ export const admissionService = {
     deleteAdmission,
     updateAdmissionStatus,
     updatePaymentStatus,
+    sendAdmissionToGoogleSheets,
 };
 
 // export { queueAdmission };
