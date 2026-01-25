@@ -1,23 +1,4 @@
 "use strict";
-// import type { Application, Request, Response } from 'express';
-// import express from 'express';
-// import routes from './routes/index';
-// import logger from './shared/logger';
-// import requestLogger from './shared/requestLogger';
-// import errorHandler from './shared/errorHandler';
-// import setupGlobalErrorHandlers from './shared/globalErrorHandlers';
-// import connectDB from './shared/db';
-// import config from './config/index';
-// import morgan from 'morgan';
-// import cors from 'cors';
-// import session from 'express-session';
-// import passport from 'passport';
-// import notFound from './routes/notFound';
-// import MongoStore from 'connect-mongo';
-// import { connectRedis } from './config/redis';
-// import './workers/participant.worker';
-// import './workers/admission.worker';
-// import './workers/seminar-confirmation.worker';
 var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
@@ -43,7 +24,6 @@ require("./workers/seminar-confirmation.worker");
 (0, globalErrorHandlers_1.default)();
 const app = (0, express_1.default)();
 app.use((0, morgan_1.default)('dev'));
-// Enhanced CORS configuration
 app.use((0, cors_1.default)({
     origin: [
         'http://localhost:3000',
@@ -76,29 +56,14 @@ app.use((0, express_session_1.default)({
         domain: index_2.default.env === 'production' ? '.craftskillsbd.com' : undefined,
         path: '/',
     },
-    proxy: index_2.default.env === 'production', // trust X-Forwarded-For headers
+    proxy: index_2.default.env === 'production',
 }));
-// Trust proxy in production
 if (index_2.default.env === 'production') {
     app.set('trust proxy', 1);
 }
 app.use(passport_1.default.initialize());
 app.use(passport_1.default.session());
-// Add middleware to log session info (for debugging)
-// app.use((req, res, next) => {
-//     if (req.path.includes('/api/v1') && !req.path.includes('health')) {
-//         logger.info('Session Debug:', {
-//             path: req.path,
-//             sessionId: req.sessionID,
-//             authenticated: req.isAuthenticated ? req.isAuthenticated() : false,
-//             user: req.user ? { id: req.user._id, role: req.user.role } : null,
-//             cookie: req.headers.cookie ? 'present' : 'missing'
-//         });
-//     }
-//     next();
-// });
 app.use('/api/v1', index_1.default);
-// Add debug endpoint
 app.get('/api/v1/debug/session', (req, res) => {
     res.json({
         sessionId: req.sessionID,
@@ -121,7 +86,7 @@ async function bootstrap() {
     await (0, db_1.default)();
     await (0, redis_1.connectRedis)();
     app.listen(index_2.default.port, () => {
-        logger_1.default.info(`Server is running on port ${index_2.default.port} in ${index_2.default.env} mode`);
+        logger_1.default.info(`Server is running on port ${index_2.default.port}`);
     });
 }
 bootstrap();
