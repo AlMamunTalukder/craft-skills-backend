@@ -1,6 +1,4 @@
 "use strict";
-// import * as dotenv from 'dotenv';
-// import path from 'path';
 var __createBinding = (this && this.__createBinding) || (Object.create ? (function(o, m, k, k2) {
     if (k2 === undefined) k2 = k;
     var desc = Object.getOwnPropertyDescriptor(m, k);
@@ -38,24 +36,6 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-// dotenv.config({ path: path.join(process.cwd(), '.env') });
-// export default {
-//     port: process.env.PORT || 5000,
-//     databaseUrl: process.env.DATABASE_URL || 'mongodb://localhost:27017/craft-skills',
-//     sessionSecret: process.env.SESSION_SECRET || 'default-secret',
-//     env: process.env.NODE_ENV || 'development',
-//     redisHost: process.env.REDIS_HOST || 'redis://localhost:6379',
-//     // Use the SAME names as your .env file
-//     CLOUDINARY_CLOUD_NAME: process.env.CLOUDINARY_CLOUD_NAME || '',
-//     CLOUDINARY_CLOUD_KEY: process.env.CLOUDINARY_CLOUD_KEY || '',
-//     CLOUDINARY_CLOUD_SECRET: process.env.CLOUDINARY_CLOUD_SECRET || '',
-//     GOOGLE_SERVICE_ACCOUNT_EMAIL: process.env.GOOGLE_SERVICE_ACCOUNT_EMAIL || '',
-//     GOOGLE_PRIVATE_KEY: process.env.GOOGLE_PRIVATE_KEY
-//         ? process.env.GOOGLE_PRIVATE_KEY.replace(/\\n/g, '\n')
-//         : '',
-//     GOOGLE_SHEET_ID: process.env.GOOGLE_SHEET_ID || '',
-// };
-// src/config/index.ts - UPDATED VERSION
 const dotenv = __importStar(require("dotenv"));
 const path_1 = __importDefault(require("path"));
 dotenv.config({ path: path_1.default.join(process.cwd(), '.env') });

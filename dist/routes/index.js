@@ -18,6 +18,7 @@ const attendance_routes_1 = require("../modules/attendance/attendance.routes");
 const admission_routes_1 = require("../modules/admission/admission.routes");
 const studentAttendance_routes_1 = require("../modules/studentAttendance/studentAttendance.routes");
 const seminar_confirmation_routes_1 = require("../modules/seminar-confirmation/seminar-confirmation.routes");
+const review_routes_1 = require("../modules/review/review.routes");
 const router = (0, express_1.Router)();
 // Debug route to see all registered routes
 router.get('/debug-routes', (req, res) => {
@@ -94,6 +95,10 @@ const moduleRoutes = [
     {
         path: '/seminar-confirmations',
         route: seminar_confirmation_routes_1.SeminarConfirmationRoutes,
+    },
+    {
+        path: '/review',
+        route: review_routes_1.reviewRoutes,
     },
 ];
 moduleRoutes.forEach((route) => router.use(route.path, route.route));

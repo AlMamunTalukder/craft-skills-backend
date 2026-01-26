@@ -13,6 +13,7 @@ import { attendanceRoutes } from 'src/modules/attendance/attendance.routes';
 import { AdmissionRoutes } from 'src/modules/admission/admission.routes';
 import { studentAttendanceRoutes } from 'src/modules/studentAttendance/studentAttendance.routes';
 import { SeminarConfirmationRoutes } from 'src/modules/seminar-confirmation/seminar-confirmation.routes';
+import { reviewRoutes } from 'src/modules/review/review.routes';
 
 const router = Router();
 
@@ -94,6 +95,10 @@ const moduleRoutes = [
     {
         path: '/seminar-confirmations',
         route: SeminarConfirmationRoutes,
+    },
+    {
+        path: '/review',
+        route: reviewRoutes,
     },
 ];
 

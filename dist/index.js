@@ -39,8 +39,8 @@ app.use((0, cors_1.default)({
     exposedHeaders: ['set-cookie'],
 }));
 app.use(requestLogger_1.default);
-app.use(express_1.default.json());
-app.use(express_1.default.urlencoded({ extended: true }));
+app.use(express_1.default.json({ limit: '50mb' }));
+app.use(express_1.default.urlencoded({ limit: '50mb', extended: true }));
 // Enhanced session configuration
 app.use((0, express_session_1.default)({
     secret: index_2.default.sessionSecret,
