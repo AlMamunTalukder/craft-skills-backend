@@ -11,15 +11,8 @@ export function auth(roles: string[] = []) {
             return next();
         }
 
-        // const userRole = (req.user as IUser)?.role;
-
-        // if (!roles.includes(userRole)) {
-        //     return res.status(403).json({ message: 'Access denied: insufficient role' });
-        // }
-
         const user = req.user as IUser;
         if (!roles.includes(user.role)) {
-            // console.log('Role check failed:', { userRole: user.role, required: roles });
             return res.status(403).json({
                 message: 'Access denied: insufficient role',
                 userRole: user.role,
