@@ -24,12 +24,12 @@ export const studentAttendanceController = {
         try {
             const user = (req as any).user;
 
-            if (!user) {
-                return res.status(401).json({
-                    success: false,
-                    message: 'Authentication required',
-                });
-            }
+            // if (!user) {
+            //     return res.status(401).json({
+            //         success: false,
+            //         message: 'Authentication required',
+            //     });
+            // }
 
             // Get user with populated batch
             const userData = await User.findById(user._id)
@@ -165,12 +165,12 @@ export const studentAttendanceController = {
         try {
             const user = (req as any).user;
 
-            if (!user) {
-                return res.status(401).json({
-                    success: false,
-                    message: 'Authentication required',
-                });
-            }
+            // if (!user) {
+            //     return res.status(401).json({
+            //         success: false,
+            //         message: 'Authentication required',
+            //     });
+            // }
 
             const userData = await User.findById(user._id).select('batchNumber').lean();
 
@@ -252,12 +252,12 @@ export const studentAttendanceController = {
             const user = (req as any).user;
             const { limit = 20 } = req.query;
 
-            if (!user) {
-                return res.status(401).json({
-                    success: false,
-                    message: 'Authentication required',
-                });
-            }
+            // if (!user) {
+            //     return res.status(401).json({
+            //         success: false,
+            //         message: 'Authentication required',
+            //     });
+            // }
 
             const history = await Attendance.find({
                 studentId: user._id,

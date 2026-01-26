@@ -218,14 +218,14 @@ const AdmissionSchema = new Schema<IAdmission>(
             type: String,
             trim: true,
         },
-        occupation: {
-            type: String,
-            trim: true,
-        },
-        address: {
-            type: String,
-            trim: true,
-        },
+        // occupation: {
+        //     type: String,
+        //     trim: true,
+        // },
+        // address: {
+        //     type: String,
+        //     trim: true,
+        // },
         courseId: {
             type: Schema.Types.ObjectId,
             ref: 'Course',
