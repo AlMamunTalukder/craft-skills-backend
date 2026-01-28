@@ -24,16 +24,10 @@ export const studentAttendanceController = {
         try {
             const user = (req as any).user;
 
-            // if (!user) {
-            //     return res.status(401).json({
-            //         success: false,
-            //         message: 'Authentication required',
-            //     });
-            // }
-
             // Get user with populated batch
             const userData = await User.findById(user._id)
-                .populate('batchId', 'name code description isActive')
+                .populate('currentBatchId', 'name code description isActive')
+                .populate('admissionIds', 'paymentMethod amount discountAmount paymentStatus')
                 .lean();
 
             if (!userData) {
@@ -43,27 +37,70 @@ export const studentAttendanceController = {
                 });
             }
 
-            // Type assertion with proper interface
-            const typedUserData = userData as unknown as UserLeanDocument & {
-                batchId: {
-                    _id: mongoose.Types.ObjectId;
-                    name: string;
-                    code: string;
-                    description: string;
-                    isActive: boolean;
-                };
-            };
+            // Type assertion - cast to any first, then to our expected type
+            const typedUserData = userData as any;
 
-            // Calculate attendance statistics
+            // Determine which batch to use for stats
+            let batchNumber: string | undefined = typedUserData.currentBatchNumber;
+            let batchId: any = typedUserData.currentBatchId;
+
+            // Fallback to first batch if no current batch
+            if (
+                !batchNumber &&
+                typedUserData.batchNumbers &&
+                typedUserData.batchNumbers.length > 0
+            ) {
+                batchNumber = typedUserData.batchNumbers[0];
+                batchId = typedUserData.batchIds && typedUserData.batchIds[0];
+            }
+
+            // If still no batch, return basic user data
+            if (!batchNumber) {
+                return res.json({
+                    success: true,
+                    data: {
+                        user: {
+                            _id: typedUserData._id,
+                            name: typedUserData.name,
+                            email: typedUserData.email,
+                            phone: typedUserData.phone,
+                            role: typedUserData.role,
+                            batchNumber: null,
+                            batchId: null,
+                            admissionId:
+                                typedUserData.admissionIds && typedUserData.admissionIds[0],
+                        },
+                        attendanceStats: {
+                            summary: { attended: 0, total: 0, percentage: 0 },
+                            byType: {
+                                regular: { attended: 0, percentage: 0 },
+                                problemSolving: { attended: 0, percentage: 0 },
+                                practice: { attended: 0, percentage: 0 },
+                            },
+                        },
+                    },
+                });
+            }
+
+            // Calculate attendance statistics for the current batch
             const attendanceStats = await calculateAttendanceStats(
                 user._id.toString(),
-                typedUserData.batchNumber,
+                batchNumber,
             );
 
             res.json({
                 success: true,
                 data: {
-                    user: typedUserData,
+                    user: {
+                        _id: typedUserData._id,
+                        name: typedUserData.name,
+                        email: typedUserData.email,
+                        phone: typedUserData.phone,
+                        role: typedUserData.role,
+                        batchNumber: batchNumber,
+                        batchId: batchId,
+                        admissionId: typedUserData.admissionIds && typedUserData.admissionIds[0],
+                    },
                     attendanceStats,
                 },
             });
@@ -448,74 +485,77 @@ export const studentAttendanceController = {
 
 // Helper function to calculate attendance statistics
 async function calculateAttendanceStats(studentId: string, batchNumber: string) {
-    // Get all attendance records for this student
-    const allAttendance = await Attendance.find({
-        studentId: new mongoose.Types.ObjectId(studentId),
-        batchId: batchNumber,
-    }).lean();
+    try {
+        // Get all attendance records for this student and batch
+        const allAttendance = await Attendance.find({
+            studentId: new mongoose.Types.ObjectId(studentId),
+            batchId: batchNumber,
+        }).lean();
 
-    // Calculate counts
-    const attended = allAttendance.filter((record) => record.attended).length;
-    const total = allAttendance.length;
+        // Calculate counts
+        const attended = allAttendance.filter((record: any) => record.attended).length;
+        const total = allAttendance.length;
 
-    // Calculate by session type
-    const regular = allAttendance.filter((r) => r.sessionType === 'regular' && r.attended).length;
-    const problemSolving = allAttendance.filter(
-        (r) => r.sessionType === 'problemSolving' && r.attended,
-    ).length;
-    const practice = allAttendance.filter((r) => r.sessionType === 'practice' && r.attended).length;
-    const special = allAttendance.filter((r) => r.sessionType === 'special' && r.attended).length;
-    const guest = allAttendance.filter((r) => r.sessionType === 'guest' && r.attended).length;
+        // Calculate by session type
+        const regular = allAttendance.filter(
+            (r: any) => r.sessionType === 'regular' && r.attended,
+        ).length;
+        const problemSolving = allAttendance.filter(
+            (r: any) => r.sessionType === 'problemSolving' && r.attended,
+        ).length;
+        const practice = allAttendance.filter(
+            (r: any) => r.sessionType === 'practice' && r.attended,
+        ).length;
 
-    // Calculate percentages
-    const percentage = total > 0 ? Math.round((attended / total) * 100) : 0;
-    const regularPercentage =
-        allAttendance.filter((r) => r.sessionType === 'regular').length > 0
-            ? Math.round(
-                  (regular / allAttendance.filter((r) => r.sessionType === 'regular').length) * 100,
-              )
-            : 0;
-    const problemSolvingPercentage =
-        allAttendance.filter((r) => r.sessionType === 'problemSolving').length > 0
-            ? Math.round(
-                  (problemSolving /
-                      allAttendance.filter((r) => r.sessionType === 'problemSolving').length) *
-                      100,
-              )
-            : 0;
-    const practicePercentage =
-        allAttendance.filter((r) => r.sessionType === 'practice').length > 0
-            ? Math.round(
-                  (practice / allAttendance.filter((r) => r.sessionType === 'practice').length) *
-                      100,
-              )
-            : 0;
-    const specialPercentage =
-        allAttendance.filter((r) => r.sessionType === 'special').length > 0
-            ? Math.round(
-                  (special / allAttendance.filter((r) => r.sessionType === 'special').length) * 100,
-              )
-            : 0;
-    const guestPercentage =
-        allAttendance.filter((r) => r.sessionType === 'guest').length > 0
-            ? Math.round(
-                  (guest / allAttendance.filter((r) => r.sessionType === 'guest').length) * 100,
-              )
-            : 0;
+        // Calculate percentages
+        const percentage = total > 0 ? Math.round((attended / total) * 100) : 0;
+        const regularPercentage =
+            allAttendance.filter((r: any) => r.sessionType === 'regular').length > 0
+                ? Math.round(
+                      (regular /
+                          allAttendance.filter((r: any) => r.sessionType === 'regular').length) *
+                          100,
+                  )
+                : 0;
+        const problemSolvingPercentage =
+            allAttendance.filter((r: any) => r.sessionType === 'problemSolving').length > 0
+                ? Math.round(
+                      (problemSolving /
+                          allAttendance.filter((r: any) => r.sessionType === 'problemSolving')
+                              .length) *
+                          100,
+                  )
+                : 0;
+        const practicePercentage =
+            allAttendance.filter((r: any) => r.sessionType === 'practice').length > 0
+                ? Math.round(
+                      (practice /
+                          allAttendance.filter((r: any) => r.sessionType === 'practice').length) *
+                          100,
+                  )
+                : 0;
 
-    return {
-        summary: {
-            attended,
-            total,
-            percentage,
-        },
-        byType: {
-            regular: { attended: regular, percentage: regularPercentage },
-            problemSolving: { attended: problemSolving, percentage: problemSolvingPercentage },
-            practice: { attended: practice, percentage: practicePercentage },
-            special: { attended: special, percentage: specialPercentage },
-            guest: { attended: guest, percentage: guestPercentage },
-        },
-        recentCount: allAttendance.length,
-    };
+        return {
+            summary: {
+                attended,
+                total,
+                percentage,
+            },
+            byType: {
+                regular: { attended: regular, percentage: regularPercentage },
+                problemSolving: { attended: problemSolving, percentage: problemSolvingPercentage },
+                practice: { attended: practice, percentage: practicePercentage },
+            },
+        };
+    } catch (error) {
+        // console.error('Error calculating attendance stats:', error);
+        return {
+            summary: { attended: 0, total: 0, percentage: 0 },
+            byType: {
+                regular: { attended: 0, percentage: 0 },
+                problemSolving: { attended: 0, percentage: 0 },
+                practice: { attended: 0, percentage: 0 },
+            },
+        };
+    }
 }
