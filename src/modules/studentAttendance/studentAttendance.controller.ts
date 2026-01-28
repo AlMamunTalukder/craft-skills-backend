@@ -113,7 +113,6 @@ export const studentAttendanceController = {
         }
     },
 
-    // Mark attendance for main classes
     markAttendance: async (req: Request, res: Response) => {
         try {
             const user = (req as any).user;
@@ -126,8 +125,10 @@ export const studentAttendanceController = {
                 });
             }
 
-            // Get user's batch number
-            const userData = await User.findById(user._id).select('batchNumber').lean();
+            // Get user with all batch information
+            const userData = await User.findById(user._id)
+                .select('batchNumbers batchIds currentBatchNumber')
+                .lean();
 
             if (!userData) {
                 return res.status(404).json({
@@ -136,15 +137,43 @@ export const studentAttendanceController = {
                 });
             }
 
-            const typedUserData = userData as unknown as { batchNumber: string };
+            const typedUserData = userData as any;
+
+            // Get the batch number from the request or use current batch
+            let batchNumber = req.body.batchNumber || typedUserData.currentBatchNumber;
+
+            // Fallback to first batch if no batch specified
+            if (
+                !batchNumber &&
+                typedUserData.batchNumbers &&
+                typedUserData.batchNumbers.length > 0
+            ) {
+                batchNumber = typedUserData.batchNumbers[0];
+            }
+
+            if (!batchNumber) {
+                return res.status(400).json({
+                    success: false,
+                    message: 'Batch not specified and user has no batch assigned',
+                });
+            }
+
+            // Verify that the user is enrolled in this batch
+            if (!typedUserData.batchNumbers.includes(batchNumber)) {
+                return res.status(403).json({
+                    success: false,
+                    message: 'User is not enrolled in this batch',
+                });
+            }
 
             // Set date to today (start of day)
             const today = new Date();
             today.setHours(0, 0, 0, 0);
 
-            // Check if attendance already exists
+            // Check if attendance already exists for this batch
             const existingAttendance = await Attendance.findOne({
                 studentId: user._id,
+                batchId: batchNumber,
                 className,
                 sessionType,
                 date: today,
@@ -156,10 +185,10 @@ export const studentAttendanceController = {
                 existingAttendance.markedAt = new Date();
                 await existingAttendance.save();
             } else {
-                // Create new attendance
+                // Create new attendance for this batch
                 const attendance = new Attendance({
                     studentId: user._id,
-                    batchId: typedUserData.batchNumber,
+                    batchId: batchNumber,
                     className,
                     sessionType,
                     attended,
@@ -169,15 +198,12 @@ export const studentAttendanceController = {
                 await attendance.save();
             }
 
-            // Get updated statistics
-            const updatedStats = await calculateAttendanceStats(
-                user._id.toString(),
-                typedUserData.batchNumber,
-            );
+            // Get updated statistics for this specific batch
+            const updatedStats = await calculateAttendanceStats(user._id.toString(), batchNumber);
 
             res.json({
                 success: true,
-                message: `Attendance ${attended ? 'marked' : 'unmarked'} successfully`,
+                message: `Attendance ${attended ? 'marked' : 'unmarked'} successfully for batch ${batchNumber}`,
                 data: updatedStats,
             });
         } catch (error: any) {
@@ -186,13 +212,14 @@ export const studentAttendanceController = {
             if (error.code === 11000) {
                 return res.status(400).json({
                     success: false,
-                    message: 'Attendance already marked for this session today',
+                    message: 'Attendance already marked for this session today in this batch',
                 });
             }
 
             res.status(500).json({
                 success: false,
                 message: 'Failed to mark attendance',
+                error: error.message,
             });
         }
     },
@@ -202,14 +229,9 @@ export const studentAttendanceController = {
         try {
             const user = (req as any).user;
 
-            // if (!user) {
-            //     return res.status(401).json({
-            //         success: false,
-            //         message: 'Authentication required',
-            //     });
-            // }
-
-            const userData = await User.findById(user._id).select('batchNumber').lean();
+            const userData = await User.findById(user._id)
+                .select('currentBatchNumber batchNumbers')
+                .lean();
 
             if (!userData) {
                 return res.status(404).json({
@@ -218,7 +240,24 @@ export const studentAttendanceController = {
                 });
             }
 
-            const typedUserData = userData as unknown as { batchNumber: string };
+            const typedUserData = userData as any;
+
+            // Get current batch number
+            let batchNumber = typedUserData.currentBatchNumber;
+            if (
+                !batchNumber &&
+                typedUserData.batchNumbers &&
+                typedUserData.batchNumbers.length > 0
+            ) {
+                batchNumber = typedUserData.batchNumbers[0];
+            }
+
+            if (!batchNumber) {
+                return res.json({
+                    success: true,
+                    data: [],
+                });
+            }
 
             // Generate all main classes for today (15 classes × 3 sessions)
             const allMainClasses: Array<{
@@ -253,13 +292,14 @@ export const studentAttendanceController = {
                 });
             }
 
-            // Check which sessions are already attended
+            // Check which sessions are already attended for the current batch
             const sessionsWithAttendance = await Promise.all(
                 allMainClasses.map(async (session) => {
                     const attendance = await Attendance.findOne({
                         studentId: user._id,
                         className: session.className,
                         sessionType: session.sessionType,
+                        batchId: batchNumber, // Filter by batch number
                     });
 
                     return {
@@ -287,18 +327,40 @@ export const studentAttendanceController = {
     getAttendanceHistory: async (req: Request, res: Response) => {
         try {
             const user = (req as any).user;
-            const { limit = 20 } = req.query;
+            const { limit = 20, batchNumber } = req.query;
 
-            // if (!user) {
-            //     return res.status(401).json({
-            //         success: false,
-            //         message: 'Authentication required',
-            //     });
-            // }
+            // Get batch number from query or user's current batch
+            let targetBatchNumber = batchNumber as string;
 
-            const history = await Attendance.find({
+            if (!targetBatchNumber) {
+                const userData = await User.findById(user._id)
+                    .select('currentBatchNumber batchNumbers')
+                    .lean();
+
+                if (userData) {
+                    const typedUserData = userData as any;
+                    targetBatchNumber = typedUserData.currentBatchNumber;
+
+                    if (
+                        !targetBatchNumber &&
+                        typedUserData.batchNumbers &&
+                        typedUserData.batchNumbers.length > 0
+                    ) {
+                        targetBatchNumber = typedUserData.batchNumbers[0];
+                    }
+                }
+            }
+
+            const query: any = {
                 studentId: user._id,
-            })
+            };
+
+            // Only filter by batch if specified
+            if (targetBatchNumber) {
+                query.batchId = targetBatchNumber;
+            }
+
+            const history = await Attendance.find(query)
                 .sort({ date: -1, markedAt: -1 })
                 .limit(Number(limit))
                 .lean();
@@ -306,6 +368,7 @@ export const studentAttendanceController = {
             res.json({
                 success: true,
                 data: history,
+                batch: targetBatchNumber,
             });
         } catch (error: any) {
             // console.error('Get attendance history error:', error);
@@ -316,7 +379,7 @@ export const studentAttendanceController = {
         }
     },
 
-    // Update special class attendance - FIXED
+    // Update special class attendance
     updateSpecialClass: async (req: Request, res: Response) => {
         try {
             const user = (req as any).user;
@@ -329,8 +392,10 @@ export const studentAttendanceController = {
                 });
             }
 
-            // Get user's batch number
-            const userData = await User.findById(user._id).select('batchNumber').lean();
+            // Get user's current batch number
+            const userData = await User.findById(user._id)
+                .select('currentBatchNumber batchNumbers')
+                .lean();
             if (!userData) {
                 return res.status(404).json({
                     success: false,
@@ -338,7 +403,24 @@ export const studentAttendanceController = {
                 });
             }
 
-            const typedUserData = userData as unknown as { batchNumber: string };
+            const typedUserData = userData as any;
+
+            // Get current batch number
+            let batchNumber = typedUserData.currentBatchNumber;
+            if (
+                !batchNumber &&
+                typedUserData.batchNumbers &&
+                typedUserData.batchNumbers.length > 0
+            ) {
+                batchNumber = typedUserData.batchNumbers[0];
+            }
+
+            if (!batchNumber) {
+                return res.status(400).json({
+                    success: false,
+                    message: 'User does not have a batch assigned',
+                });
+            }
 
             // Set date to today
             const today = new Date();
@@ -350,6 +432,7 @@ export const studentAttendanceController = {
                 className,
                 sessionType: 'special',
                 date: today,
+                batchId: batchNumber,
             });
 
             if (existingAttendance) {
@@ -361,7 +444,7 @@ export const studentAttendanceController = {
                 // Create new attendance record
                 const newAttendance = new Attendance({
                     studentId: user._id,
-                    batchId: typedUserData.batchNumber,
+                    batchId: batchNumber,
                     className,
                     sessionType: 'special',
                     attended,
@@ -372,10 +455,7 @@ export const studentAttendanceController = {
             }
 
             // Get updated statistics
-            const updatedStats = await calculateAttendanceStats(
-                user._id.toString(),
-                typedUserData.batchNumber,
-            );
+            const updatedStats = await calculateAttendanceStats(user._id.toString(), batchNumber);
 
             res.json({
                 success: true,
@@ -411,8 +491,10 @@ export const studentAttendanceController = {
                 });
             }
 
-            // Get user's batch number
-            const userData = await User.findById(user._id).select('batchNumber').lean();
+            // Get user's current batch information
+            const userData = await User.findById(user._id)
+                .select('currentBatchNumber batchNumbers batchIds')
+                .lean();
             if (!userData) {
                 return res.status(404).json({
                     success: false,
@@ -420,7 +502,24 @@ export const studentAttendanceController = {
                 });
             }
 
-            const typedUserData = userData as unknown as { batchNumber: string };
+            const typedUserData = userData as any;
+
+            // Get current batch number or use the first one
+            let batchNumber = typedUserData.currentBatchNumber;
+            if (
+                !batchNumber &&
+                typedUserData.batchNumbers &&
+                typedUserData.batchNumbers.length > 0
+            ) {
+                batchNumber = typedUserData.batchNumbers[0];
+            }
+
+            if (!batchNumber) {
+                return res.status(400).json({
+                    success: false,
+                    message: 'User does not have a batch assigned',
+                });
+            }
 
             // Set date to today
             const today = new Date();
@@ -432,6 +531,7 @@ export const studentAttendanceController = {
                 className,
                 sessionType: 'guest',
                 date: today,
+                batchId: batchNumber, // Filter by batch number
             });
 
             if (existingAttendance) {
@@ -443,7 +543,7 @@ export const studentAttendanceController = {
                 // Create new attendance record
                 const newAttendance = new Attendance({
                     studentId: user._id,
-                    batchId: typedUserData.batchNumber,
+                    batchId: batchNumber,
                     className,
                     sessionType: 'guest',
                     attended,
@@ -453,11 +553,8 @@ export const studentAttendanceController = {
                 await newAttendance.save();
             }
 
-            // Get updated statistics
-            const updatedStats = await calculateAttendanceStats(
-                user._id.toString(),
-                typedUserData.batchNumber,
-            );
+            // Get updated statistics for the current batch
+            const updatedStats = await calculateAttendanceStats(user._id.toString(), batchNumber);
 
             res.json({
                 success: true,
