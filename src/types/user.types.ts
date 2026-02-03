@@ -45,3 +45,14 @@ export interface AuthUser {
     createdAt?: Date;
     updatedAt?: Date;
 }
+
+// Create a types.ts file or add inline
+export type ClassScheduleItem = {
+    _id?: string;
+    className: string;
+    days: string;
+    time: string;
+    holidays?: string;
+    createdAt?: string;
+    updatedAt?: string;
+};

@@ -1,14 +1,32 @@
 import { Schema, model } from 'mongoose';
-import type { ISchedule } from './schedule.interface';
 
-const scheduleSchema = new Schema<ISchedule>(
+// Sub-schema for individual class
+const scheduleItemSchema = new Schema({
+    className: { type: String, required: true },
+    days: { type: String, required: true },
+    time: { type: String, required: true },
+});
+
+// Main schedule schema
+// In schedule.model.ts
+const scheduleSchema = new Schema(
     {
-        className: { type: String, required: true },
-        days: { type: String, required: true },
-        time: { type: String, required: true },
+        weekNumber: { type: Number, required: true },
+        schedules: {
+            type: [
+                {
+                    className: { type: String, required: true },
+                    days: { type: String, required: true },
+                    time: { type: String, required: true },
+                },
+            ],
+            required: true,
+            default: [],
+        },
         holidays: { type: String },
+        isActive: { type: Boolean, default: true }, // Add this field
     },
     { timestamps: true },
 );
 
-export const Schedule = model<ISchedule>('Schedule', scheduleSchema);
+export const Schedule = model('Schedule', scheduleSchema);
