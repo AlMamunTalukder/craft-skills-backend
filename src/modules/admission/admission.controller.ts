@@ -5,6 +5,7 @@ import { admissionService, queueAdmission } from './admission.service';
 import { Admission } from './admission.model';
 import sendResponse from 'src/utils/sendResponse';
 import { AuthUser } from 'src/types/user.types';
+import User from '../user/user.model';
 
 export const admissionController = {
     getAllAdmissions: catchAsync(async (req: Request, res: Response) => {
@@ -146,74 +147,148 @@ export const admissionController = {
         });
     }),
 
-    // Add this method to admission.controller.ts
-    getStudentAdmissionResult: catchAsync(async (req: Request, res: Response): Promise<void> => {
+    getStudentAdmissionResult: catchAsync(async (req: Request, res: Response): Promise<any> => {
         const user = req.user as AuthUser;
+        const { batchId } = req.query; // Get batchId from query params
 
-        // if (!user) {
-        //     return res.status(401).json({
-        //         success: false,
-        //         message: 'Unauthorized',
-        //         data: null,
-        //     });
-        // }
+        if (!user) {
+            return res.status(401).json({
+                success: false,
+                message: 'Authentication required',
+                data: null,
+            });
+        }
 
         let admission = null;
+        let query: any = {
+            $or: [{ email: user.email }, { phone: user.phone }],
+        };
 
-        // 1. First try to get admission by user's admissionId
-        if (user.admissionId) {
-            admission = await Admission.findById(user.admissionId)
-                .select('name result updatedAt')
-                .populate('batchId', 'batchNumber name');
+        // If batchId is provided, add it to query
+        if (batchId) {
+            query.batchId = batchId;
         }
 
-        // 2. If not found, try to get admission by exact match with user
+        // Try to find admission for the specified batch
+        admission = await Admission.findOne(query)
+            .select('name result updatedAt batchId courseId paymentStatus status')
+            .populate('batchId', 'name batchNumber code description')
+            .populate('courseId', 'name code')
+            .lean();
+
+        // If no batch specified or not found, try to get current batch admission
+        if (!admission) {
+            // Get user's current batch info
+            const userData = await User.findById(user._id)
+                .select('currentBatchId currentBatchNumber')
+                .lean();
+
+            if (userData && (userData as any).currentBatchId) {
+                admission = await Admission.findOne({
+                    $or: [{ email: user.email }, { phone: user.phone }],
+                    batchId: (userData as any).currentBatchId,
+                })
+                    .select('name result updatedAt batchId courseId paymentStatus status')
+                    .populate('batchId', 'name batchNumber code description')
+                    .populate('courseId', 'name code')
+                    .lean();
+            }
+        }
+
+        // If still not found, get any admission (fallback)
         if (!admission) {
             admission = await Admission.findOne({
-                name: user.name,
-                $or: [{ email: user.email || '' }, { phone: user.phone || '' }],
+                $or: [{ email: user.email }, { phone: user.phone }],
             })
-                .select('name result updatedAt')
-                .populate('batchId', 'batchNumber name');
+                .select('name result updatedAt batchId courseId paymentStatus status')
+                .populate('batchId', 'name batchNumber code description')
+                .populate('courseId', 'name code')
+                .lean();
         }
 
-        // 3. If still not found, try any admission with matching email/phone
         if (!admission) {
-            admission = await Admission.findOne({
-                $or: [{ email: user.email || '' }, { phone: user.phone || '' }],
-            })
-                .select('name result updatedAt')
-                .populate('batchId', 'batchNumber name');
+            return res.status(404).json({
+                success: false,
+                message: 'No admission record found',
+                data: null,
+            });
         }
 
-        // if (!admission) {
-        //     return res.status(404).json({
-        //         success: false,
-        //         message: 'No admission record found',
-        //         data: null,
-        //     });
-        // }
+        // Cast admission to any to access properties safely
+        const admissionData = admission as any;
 
-        res.status(200).json({
+        return res.status(200).json({
             success: true,
             message: 'Result retrieved successfully',
             data: {
-                user: {
-                    name: user.name,
-                    email: user.email,
-                    phone: user.phone,
-                    batchNumber: user.batchNumber,
-                },
-                admission: {
-                    name: admission.name,
-                    result: admission.result || 'pending',
-                    updatedAt: admission.updatedAt,
-                    batchId: admission.batchId,
-                },
-                // Always show the logged-in user's name from session
+                _id: admissionData._id,
+                name: admissionData.name,
+                result: admissionData.result || 'pending',
+                updatedAt: admissionData.updatedAt,
+                batchId: admissionData.batchId,
+                batchName:
+                    admissionData.batchId?.name ||
+                    `Batch ${admissionData.batchId?.batchNumber || 'N/A'}`,
+                batchNumber: admissionData.batchId?.batchNumber,
+                courseName: admissionData.courseId?.name || 'Course',
+                paymentStatus: admissionData.paymentStatus,
+                status: admissionData.status,
                 displayName: user.name,
-                admissionName: admission.name,
+                admissionName: admissionData.name,
             },
+        });
+    }),
+
+    getStudentAllAdmissionResults: catchAsync(async (req: Request, res: Response): Promise<any> => {
+        const user = req.user as AuthUser;
+
+        if (!user) {
+            return res.status(401).json({
+                success: false,
+                message: 'Authentication required',
+                data: null,
+            });
+        }
+
+        // Find ALL admissions for this user by matching email or phone
+        const admissions = await Admission.find({
+            $or: [{ email: user.email }, { phone: user.phone }],
+        })
+            .populate('batchId', 'name batchNumber code description')
+            .populate('courseId', 'name code')
+            .sort({ createdAt: -1 })
+            .lean();
+
+        if (!admissions || admissions.length === 0) {
+            return res.status(404).json({
+                success: false,
+                message: 'No admission records found',
+                data: [],
+            });
+        }
+
+        // Transform the data
+        const results = admissions.map((admission) => ({
+            _id: admission._id,
+            name: admission.name,
+            result: admission.result || 'pending',
+            updatedAt: admission.updatedAt,
+            createdAt: admission.createdAt,
+            batchId: admission.batchId,
+            batchName:
+                (admission.batchId as any)?.name ||
+                `Batch ${(admission.batchId as any)?.batchNumber || 'N/A'}`,
+            batchNumber: (admission.batchId as any)?.batchNumber,
+            courseName: (admission.courseId as any)?.name || 'Course',
+            paymentStatus: admission.paymentStatus,
+            status: admission.status,
+        }));
+
+        res.status(200).json({
+            success: true,
+            message: 'All results retrieved successfully',
+            data: results,
+            count: results.length,
         });
     }),
 };
