@@ -291,4 +291,15 @@ export const admissionController = {
             count: results.length,
         });
     }),
+
+    createAdmissionDirect: catchAsync(async (req: Request, res: Response) => {
+        // Direct creation without queue for admin
+        const admission = await admissionService.createAdmission(req.body);
+
+        res.status(201).json({
+            success: true,
+            message: 'Admission created successfully',
+            data: admission,
+        });
+    }),
 };

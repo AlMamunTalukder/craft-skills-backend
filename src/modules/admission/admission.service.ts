@@ -280,5 +280,3 @@ export const admissionService = {
     updatePaymentStatus,
     sendAdmissionToGoogleSheets,
 };
-
-// export { queueAdmission };

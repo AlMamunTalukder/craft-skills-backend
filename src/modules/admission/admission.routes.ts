@@ -58,6 +58,9 @@ router.get(
     '/student/all-results',
     auth(['student']),
     admissionController.getStudentAllAdmissionResults,
-); // NEW
+);
+
+// Add this route in your admission.routes.ts
+router.post('/admin/register', auth(['admin']), admissionController.createAdmissionDirect);
 
 export const AdmissionRoutes = router;
