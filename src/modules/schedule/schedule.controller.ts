@@ -129,31 +129,25 @@ export const updateSchedule = async (req: Request, res: Response) => {
     }
 };
 
-// In schedule.controller.ts
 export const updateScheduleStatus = async (req: Request, res: Response) => {
     try {
         const { id } = req.params;
         const { isActive } = req.body;
 
-        const schedule = await Schedule.findByIdAndUpdate(id, { isActive }, { new: true });
-
-        if (!schedule) {
-            return res.status(404).json({
-                success: false,
-                message: 'Schedule not found',
-            });
+        // If we are setting this one to active, turn ALL others off first
+        if (isActive === true) {
+            await Schedule.updateMany({}, { isActive: false });
         }
+
+        const schedule = await Schedule.findByIdAndUpdate(id, { isActive }, { new: true });
 
         res.json({
             success: true,
-            message: `Schedule ${isActive ? 'activated' : 'deactivated'} successfully`,
+            message: `Schedule Week ${schedule?.weekNumber} is now ${isActive ? 'active' : 'inactive'}`,
             data: schedule,
         });
     } catch (error: any) {
-        res.status(500).json({
-            success: false,
-            message: error.message || 'Failed to update schedule status',
-        });
+        res.status(500).json({ success: false, message: error.message });
     }
 };
 
@@ -182,17 +176,24 @@ export const deleteSchedule = async (req: Request, res: Response) => {
     }
 };
 
-// Also update your getSchedule to handle first-time creation
+// Updated getSchedule in schedule.controller.ts
 export const getSchedule = async (_req: Request, res: Response) => {
     try {
-        let scheduleDoc = await Schedule.findOne();
+        // 1. Specifically look for the ACTIVE schedule
+        let scheduleDoc = await Schedule.findOne({ isActive: true });
 
-        // If no schedule exists, create a default one
+        // 2. If no schedule is marked active, fallback to the latest one
+        if (!scheduleDoc) {
+            scheduleDoc = await Schedule.findOne().sort({ createdAt: -1 });
+        }
+
+        // 3. Only create if the database is completely empty
         if (!scheduleDoc) {
             scheduleDoc = await Schedule.create({
                 weekNumber: 1,
                 schedules: [],
                 holidays: '',
+                isActive: true,
             });
         }
 
@@ -204,45 +205,6 @@ export const getSchedule = async (_req: Request, res: Response) => {
         res.status(500).json({
             success: false,
             message: error.message || 'Failed to fetch schedule',
-        });
-    }
-};
-
-export const bulkUpdateSchedules = async (req: Request, res: Response) => {
-    try {
-        const { schedules, holidays, weekNumber } = req.body;
-
-        if (!Array.isArray(schedules)) {
-            return res.status(400).json({
-                success: false,
-                message: 'Schedules must be an array',
-            });
-        }
-
-        const scheduleDoc = await Schedule.findOne();
-
-        if (!scheduleDoc) {
-            return res.status(404).json({
-                success: false,
-                message: 'Schedule document not found',
-            });
-        }
-
-        // scheduleDoc.schedules = schedules;
-        if (holidays !== undefined) scheduleDoc.holidays = holidays;
-        if (weekNumber !== undefined) scheduleDoc.weekNumber = weekNumber;
-
-        await scheduleDoc.save();
-
-        res.json({
-            success: true,
-            message: 'Class schedule updated successfully',
-            data: scheduleDoc,
-        });
-    } catch (error: any) {
-        res.status(500).json({
-            success: false,
-            message: error.message || 'Failed to update schedule',
         });
     }
 };
