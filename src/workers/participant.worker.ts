@@ -49,7 +49,7 @@ new Worker(
                 hour12: true,
             });
 
-            const sheetTitle = `${seminar.sl || 'Seminar'}-রেজিস্ট্রেশন`;
+            const sheetTitle = `${seminar.sl || 'Seminar'}- ফ্রি সেমিনার`;
 
             await appendDataToGoogleSheet(
                 sheetTitle,
