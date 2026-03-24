@@ -40,7 +40,8 @@ new Worker(
             );
 
             // 4. Append to Google Sheet (OUTSIDE transaction)
-            const registrationDate = new Date().toLocaleString('en-US', {
+            const registrationDate = new Date().toLocaleString('en-BD', {
+                timeZone: 'Asia/Dhaka',
                 year: 'numeric',
                 month: 'long',
                 day: 'numeric',

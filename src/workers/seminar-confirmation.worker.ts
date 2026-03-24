@@ -1,4 +1,4 @@
-// server/workers/seminar-confirmation.worker.ts
+// server/workers/seminar-confirmation.worker.ts (pdf download)
 import { Worker } from 'bullmq';
 import mongoose from 'mongoose';
 import { redisConnection } from '../queues/connection';
@@ -28,7 +28,8 @@ new Worker(
             logger.info(`Confirmation ${confirmation._id} saved to DB`);
 
             // 3. Append to Google Sheet
-            const confirmationDate = new Date().toLocaleString('en-US', {
+            const confirmationDate = new Date().toLocaleString('en-BD', {
+                timeZone: 'Asia/Dhaka',
                 year: 'numeric',
                 month: 'long',
                 day: 'numeric',

@@ -36,7 +36,8 @@ new Worker(
             logger.info(`Admission saved for ${admission.name}`);
 
             // 4. Send to Google Sheet
-            const registrationDate = new Date().toLocaleString('en-US', {
+            const registrationDate = new Date().toLocaleString('en-BD', {
+                timeZone: 'Asia/Dhaka',
                 year: 'numeric',
                 month: 'long',
                 day: 'numeric',
