@@ -1,4 +1,101 @@
-// src/workers/admission.worker.ts
+// // src/workers/admission.worker.ts
+// import { Worker } from 'bullmq';
+// import mongoose from 'mongoose';
+
+// import { appendDataToGoogleSheet } from '@/utils/googleSheets';
+// import logger from '@/shared/logger';
+// import { Admission } from 'src/modules/admission/admission.model';
+// import { Course } from 'src/modules/course/course.model';
+// import { CourseBatch } from 'src/modules/coursebatch/coursebatch.model';
+// import { redisConnection } from 'src/queues/connection';
+
+// new Worker(
+//     'admission-queue',
+//     async (job) => {
+//         const { admissionData } = job.data;
+//         logger.info(`Processing admission for: ${admissionData.name}`);
+
+//         const session = await mongoose.startSession();
+//         session.startTransaction();
+
+//         try {
+//             // 1. Create admission record
+//             const [admission] = await Admission.create([admissionData], { session });
+
+//             // 2. Fetch course and batch details
+//             const course = await Course.findById(admissionData.courseId).session(session);
+//             const batch = await CourseBatch.findById(admissionData.batchId).session(session);
+
+//             if (!course) throw new Error(`Course not found`);
+//             if (!batch) throw new Error(`Batch not found`);
+
+//             // 3. Commit DB transaction
+//             await session.commitTransaction();
+//             session.endSession();
+
+//             logger.info(`Admission saved for ${admission.name}`);
+
+//             // 4. Send to Google Sheet
+//             const registrationDate = new Date().toLocaleString('en-BD', {
+//                 timeZone: 'Asia/Dhaka',
+//                 year: 'numeric',
+//                 month: 'long',
+//                 day: 'numeric',
+//                 hour: '2-digit',
+//                 minute: '2-digit',
+//                 hour12: true,
+//             });
+
+//             // Use batch name as sheet name
+//             const sheetTitle = `${batch.name} - admission`;
+
+//             await appendDataToGoogleSheet(
+//                 sheetTitle,
+//                 [
+//                     'Name',
+//                     'Phone',
+//                     'WhatsApp',
+//                     'Email',
+//                     'Facebook',
+//                     'Course',
+//                     'Batch',
+//                     'Coupon Code',
+//                     'Amount',
+//                     'Payment Method',
+//                     'Sender Number',
+//                     'Registered At',
+//                 ],
+//                 [
+//                     admission.name || '',
+//                     admission.phone || '',
+//                     admission.whatsapp || '',
+//                     admission.email || '',
+//                     admission.facebook || '',
+//                     course.name || '',
+//                     batch.name || '',
+//                     admission.couponCode || '',
+//                     (admission.amount || course.price).toString(),
+//                     admission.paymentMethod || '',
+//                     admission.senderNumber || '',
+//                     registrationDate,
+//                 ],
+//             );
+
+//             logger.info(`Data sent to Google Sheet: ${sheetTitle}`);
+
+//             return admission;
+//         } catch (error: any) {
+//             await session.abortTransaction();
+//             session.endSession();
+//             logger.error(`Error in admission worker: ${error.message}`, { error });
+//             throw error;
+//         }
+//     },
+//     {
+//         connection: redisConnection,
+//         concurrency: 5,
+//     },
+// );
 import { Worker } from 'bullmq';
 import mongoose from 'mongoose';
 
@@ -8,19 +105,37 @@ import { Admission } from 'src/modules/admission/admission.model';
 import { Course } from 'src/modules/course/course.model';
 import { CourseBatch } from 'src/modules/coursebatch/coursebatch.model';
 import { redisConnection } from 'src/queues/connection';
+import { sanitizePhoneNumber } from 'src/utils/phoneSanitizer';
 
 new Worker(
     'admission-queue',
     async (job) => {
         const { admissionData } = job.data;
+
+        // --- CLEAN NUMBERS ---
+        const cleanPhone = sanitizePhoneNumber(admissionData.phone) || admissionData.phone;
+        const cleanWhatsapp = sanitizePhoneNumber(admissionData.whatsapp) || admissionData.whatsapp;
+        const cleanSenderNumber =
+            sanitizePhoneNumber(admissionData.senderNumber) || admissionData.senderNumber;
+
         logger.info(`Processing admission for: ${admissionData.name}`);
 
         const session = await mongoose.startSession();
         session.startTransaction();
 
         try {
-            // 1. Create admission record
-            const [admission] = await Admission.create([admissionData], { session });
+            // 1. Create admission record with CLEANED data
+            const [admission] = await Admission.create(
+                [
+                    {
+                        ...admissionData,
+                        phone: cleanPhone,
+                        whatsapp: cleanWhatsapp,
+                        senderNumber: cleanSenderNumber,
+                    },
+                ],
+                { session },
+            );
 
             // 2. Fetch course and batch details
             const course = await Course.findById(admissionData.courseId).session(session);
@@ -29,13 +144,10 @@ new Worker(
             if (!course) throw new Error(`Course not found`);
             if (!batch) throw new Error(`Batch not found`);
 
-            // 3. Commit DB transaction
             await session.commitTransaction();
             session.endSession();
 
-            logger.info(`Admission saved for ${admission.name}`);
-
-            // 4. Send to Google Sheet
+            // 3. Send to Google Sheet (English Pure Numbers)
             const registrationDate = new Date().toLocaleString('en-BD', {
                 timeZone: 'Asia/Dhaka',
                 year: 'numeric',
@@ -46,7 +158,6 @@ new Worker(
                 hour12: true,
             });
 
-            // Use batch name as sheet name
             const sheetTitle = `${batch.name} - admission`;
 
             await appendDataToGoogleSheet(
@@ -67,8 +178,8 @@ new Worker(
                 ],
                 [
                     admission.name || '',
-                    admission.phone || '',
-                    admission.whatsapp || '',
+                    cleanPhone, // Pure English
+                    cleanWhatsapp, // Pure English
                     admission.email || '',
                     admission.facebook || '',
                     course.name || '',
@@ -76,12 +187,10 @@ new Worker(
                     admission.couponCode || '',
                     (admission.amount || course.price).toString(),
                     admission.paymentMethod || '',
-                    admission.senderNumber || '',
+                    cleanSenderNumber, // Pure English
                     registrationDate,
                 ],
             );
-
-            logger.info(`Data sent to Google Sheet: ${sheetTitle}`);
 
             return admission;
         } catch (error: any) {
