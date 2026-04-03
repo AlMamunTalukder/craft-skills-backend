@@ -4,6 +4,7 @@ import authService from './auth.service';
 import passport from 'src/config/passport';
 import type { IUser } from '../user/user.interface';
 import catchAsync from 'src/utils/catchAsync';
+import { sanitizePhoneNumber } from 'src/utils/phoneSanitizer';
 
 const register = catchAsync(async (req: Request, res: Response): Promise<void> => {
     const result = await authService.register(req.body);
@@ -17,6 +18,17 @@ const register = catchAsync(async (req: Request, res: Response): Promise<void> =
 });
 
 const login = catchAsync((req: Request, res: Response, next: NextFunction): void => {
+    // Sanitize identifier if it looks like a phone number
+    let identifier = req.body.identifier;
+    const isEmail = identifier.includes('@');
+    
+    if (!isEmail) {
+      const sanitizedPhone = sanitizePhoneNumber(identifier);
+      if (sanitizedPhone) {
+        req.body.identifier = sanitizedPhone;
+      }
+    }
+    
     passport.authenticate('local', (err: any, user: IUser, info: any) => {
         if (err) return next(err);
         if (!user) {
@@ -56,44 +68,6 @@ const login = catchAsync((req: Request, res: Response, next: NextFunction): void
     })(req, res, next);
 });
 
-// const login = catchAsync((req: Request, res: Response, next: NextFunction): void => {
-//     passport.authenticate('local', (err: any, user: IUser, info: any) => {
-//         if (err) return next(err);
-//         if (!user) {
-//             return sendResponse(res, {
-//                 statusCode: 401,
-//                 success: false,
-//                 message: info?.message || 'Login failed',
-//                 data: null,
-//             });
-//         }
-
-//         req.logIn(user, (err) => {
-//             if (err) return next(err);
-//             return sendResponse(res, {
-//                 statusCode: 200,
-//                 success: true,
-//                 message: 'Login successful',
-//                 data: { id: user.id, email: user.email },
-//             });
-//         });
-//     })(req, res, next);
-// });
-
-// const logout = catchAsync((req: Request, res: Response, next: NextFunction) => {
-//     req.logout((err) => {
-//         if (err) return next(err);
-
-//         req.session.destroy(function (err) {
-//             if (err) {
-//                 return next(err);
-//             }
-//             res.clearCookie('connect.sid');
-//             res.redirect('/');
-//         });
-//     });
-// });
-
 const logout = catchAsync(async (req: Request, res: Response) => {
     // Passport logout
     await new Promise<void>((resolve, reject) => {
@@ -110,8 +84,7 @@ const logout = catchAsync(async (req: Request, res: Response) => {
             resolve();
         });
     });
-
-    // Clear cookie (IMPORTANT: must match your session config)
+    
     res.clearCookie('craftskills.session', {
         httpOnly: true,
         secure: process.env.NODE_ENV === 'production',
