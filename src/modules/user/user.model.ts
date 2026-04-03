@@ -41,27 +41,6 @@ export interface PopulatedUser {
     updatedAt: Date;
 }
 
-// export interface IUser extends Document {
-//     name: string;
-//     email?: string;
-//     phone?: string;
-//     password: string;
-//     role: 'student' | 'teacher' | 'admin';
-//     status: 'active' | 'inactive' | 'suspended';
-
-//     // Multiple batches support
-//     batchNumbers: string[];
-//     batchIds: Types.ObjectId[];
-//     admissionIds: Types.ObjectId[];
-
-//     currentBatchId?: Types.ObjectId;
-//     currentBatchNumber?: string;
-
-//     createdAt: Date;
-//     updatedAt: Date;
-//     validatePassword(password: string): Promise<boolean>;
-// }
-
 const userSchema = new Schema<IUser>(
     {
         name: {

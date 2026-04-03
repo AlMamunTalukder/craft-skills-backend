@@ -21,14 +21,14 @@ const login = catchAsync((req: Request, res: Response, next: NextFunction): void
     // Sanitize identifier if it looks like a phone number
     let identifier = req.body.identifier;
     const isEmail = identifier.includes('@');
-    
+
     if (!isEmail) {
-      const sanitizedPhone = sanitizePhoneNumber(identifier);
-      if (sanitizedPhone) {
-        req.body.identifier = sanitizedPhone;
-      }
+        const sanitizedPhone = sanitizePhoneNumber(identifier);
+        if (sanitizedPhone) {
+            req.body.identifier = sanitizedPhone;
+        }
     }
-    
+
     passport.authenticate('local', (err: any, user: IUser, info: any) => {
         if (err) return next(err);
         if (!user) {
@@ -84,7 +84,7 @@ const logout = catchAsync(async (req: Request, res: Response) => {
             resolve();
         });
     });
-    
+
     res.clearCookie('craftskills.session', {
         httpOnly: true,
         secure: process.env.NODE_ENV === 'production',

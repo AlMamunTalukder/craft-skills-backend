@@ -175,62 +175,6 @@ const getMyBatches = catchAsync(async (req, res) => {
     });
 });
 
-// const getMyBatches = catchAsync(async (req, res) => {
-//     const user = req.user as AuthUser;
-
-//     interface Batch {
-//         _id: string;
-//         batchNumber: string;
-//         name: string;
-//         isActive: boolean;
-//         admissionId?: string;
-//     }
-
-//     let batches: Batch[] = [];
-
-//     if (user.role === 'student') {
-//         // First, try to get user from database with admissionId
-//         const userWithAdmission = await User.findById(user._id)
-//             .select('batchNumber batchId admissionId status')
-//             .populate('batchId', 'batchNumber name')
-//             .populate('admissionId', '_id');
-
-//         if (userWithAdmission) {
-//             batches = [
-//                 {
-//                     _id: userWithAdmission.batchId?._id?.toString() || user._id.toString(),
-//                     batchNumber: userWithAdmission.batchNumber || 'N/A',
-//                     name: `Batch ${userWithAdmission.batchNumber || 'N/A'}`,
-//                     isActive: userWithAdmission.status === 'active',
-//                     admissionId:
-//                         userWithAdmission.admissionId?._id?.toString() ||
-//                         userWithAdmission.admissionId?.toString(),
-//                 },
-//             ];
-//         } else {
-//             // Fallback to using user data from request
-//             batches = [
-//                 {
-//                     _id: user.batchId?.toString() || user._id.toString(),
-//                     batchNumber: user.batchNumber || 'N/A',
-//                     name: `Batch ${user.batchNumber || 'N/A'}`,
-//                     isActive: user.status === 'active',
-//                     admissionId: user.admissionId?.toString(),
-//                 },
-//             ];
-//         }
-//     } else if (user.role === 'teacher' || user.role === 'admin') {
-//         batches = [];
-//     }
-
-//     sendResponse(res, {
-//         statusCode: 200,
-//         success: true,
-//         message: 'Batches fetched successfully',
-//         data: { batches },
-//     });
-// });
-
 // Add to user.controller.ts
 const getMyProfile = catchAsync(async (req: Request, res: Response): Promise<void> => {
     const user = req.user as IUser;
