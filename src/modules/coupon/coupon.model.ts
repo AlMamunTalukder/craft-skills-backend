@@ -65,4 +65,6 @@ CouponSchema.index({ code: 1 }, { unique: true });
 CouponSchema.index({ isActive: 1 });
 CouponSchema.index({ validFrom: 1, validTo: 1 });
 
+//update cupon
+
 export const Coupon = models.Coupon || model<ICoupon>('Coupon', CouponSchema);
