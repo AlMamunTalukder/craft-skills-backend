@@ -80,17 +80,51 @@ const login = catchAsync((req: Request, res: Response, next: NextFunction): void
 //     })(req, res, next);
 // });
 
-const logout = catchAsync((req: Request, res: Response, next: NextFunction) => {
-    req.logout((err) => {
-        if (err) return next(err);
+// const logout = catchAsync((req: Request, res: Response, next: NextFunction) => {
+//     req.logout((err) => {
+//         if (err) return next(err);
 
-        req.session.destroy(function (err) {
-            if (err) {
-                return next(err);
-            }
-            res.clearCookie('connect.sid');
-            res.redirect('/');
+//         req.session.destroy(function (err) {
+//             if (err) {
+//                 return next(err);
+//             }
+//             res.clearCookie('connect.sid');
+//             res.redirect('/');
+//         });
+//     });
+// });
+
+const logout = catchAsync(async (req: Request, res: Response) => {
+    // Passport logout
+    await new Promise<void>((resolve, reject) => {
+        req.logout((err) => {
+            if (err) return reject(err);
+            resolve();
         });
+    });
+
+    // Destroy session
+    await new Promise<void>((resolve, reject) => {
+        req.session.destroy((err) => {
+            if (err) return reject(err);
+            resolve();
+        });
+    });
+
+    // Clear cookie (IMPORTANT: must match your session config)
+    res.clearCookie('craftskills.session', {
+        httpOnly: true,
+        secure: process.env.NODE_ENV === 'production',
+        sameSite: process.env.NODE_ENV === 'production' ? 'none' : 'lax',
+        domain: process.env.NODE_ENV === 'production' ? '.craftskillsbd.com' : undefined,
+        path: '/',
+    });
+
+    // ✅ ALWAYS RETURN JSON (CRITICAL)
+    return res.status(200).json({
+        success: true,
+        message: 'Logout successful',
+        data: null,
     });
 });
 
