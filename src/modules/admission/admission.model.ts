@@ -9,7 +9,7 @@ export interface IAdmission extends Document {
     facebook?: string;
     occupation?: string;
     address?: string;
-    courseId: Types.ObjectId; 
+    courseId: Types.ObjectId;
     batchId: Types.ObjectId;
     paymentMethod?: string;
     senderNumber?: string;

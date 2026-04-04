@@ -8,12 +8,18 @@ import { AuthUser } from 'src/types/user.types';
 import User from '../user/user.model';
 
 export const admissionController = {
-    getAllAdmissions: async () => {
+    getAllAdmissions: catchAsync(async (req: Request, res: Response) => {
         const admissions = await Admission.find()
-            .populate('courseId', '_id name price') // Populate course fields
-            .populate('batchId', '_id name code'); // Populate batch fields
-        return admissions;
-    },
+            .populate('courseId', '_id name price')
+            .populate('batchId', '_id name code');
+
+        res.status(200).json({
+            success: true,
+            message: 'Admissions retrieved successfully',
+            data: admissions,
+            count: admissions.length,
+        });
+    }),
 
     // getAllAdmissions: catchAsync(async (req: Request, res: Response) => {
     //     const admissions = await admissionService.getAllAdmissions();
