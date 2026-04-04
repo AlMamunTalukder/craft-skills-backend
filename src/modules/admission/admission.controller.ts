@@ -31,10 +31,19 @@ export const admissionController = {
     //         count: admissions.length,
     //     });
     // }),
-
     getAdmissionById: catchAsync(async (req: Request, res: Response) => {
         const { id } = req.params;
-        const admission = await admissionService.getAdmissionById(id);
+        const admission = await Admission.findById(id)
+            .populate('courseId', '_id name price')
+            .populate('batchId', '_id name code');
+
+        if (!admission) {
+            return res.status(404).json({
+                success: false,
+                message: 'Admission not found',
+                data: null,
+            });
+        }
 
         res.status(200).json({
             success: true,
@@ -42,6 +51,16 @@ export const admissionController = {
             data: admission,
         });
     }),
+    // getAdmissionById: catchAsync(async (req: Request, res: Response) => {
+    //     const { id } = req.params;
+    //     const admission = await admissionService.getAdmissionById(id);
+
+    //     res.status(200).json({
+    //         success: true,
+    //         message: 'Admission retrieved successfully',
+    //         data: admission,
+    //     });
+    // }),
 
     getAdmissionsByBatchId: catchAsync(async (req: Request, res: Response) => {
         const { batchId } = req.params;
