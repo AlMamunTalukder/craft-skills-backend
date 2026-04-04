@@ -8,16 +8,23 @@ import { AuthUser } from 'src/types/user.types';
 import User from '../user/user.model';
 
 export const admissionController = {
-    getAllAdmissions: catchAsync(async (req: Request, res: Response) => {
-        const admissions = await admissionService.getAllAdmissions();
+    getAllAdmissions: async () => {
+        const admissions = await Admission.find()
+            .populate('courseId', '_id name price') // Populate course fields
+            .populate('batchId', '_id name code'); // Populate batch fields
+        return admissions;
+    },
 
-        res.status(200).json({
-            success: true,
-            message: 'Admissions retrieved successfully',
-            data: admissions,
-            count: admissions.length,
-        });
-    }),
+    // getAllAdmissions: catchAsync(async (req: Request, res: Response) => {
+    //     const admissions = await admissionService.getAllAdmissions();
+
+    //     res.status(200).json({
+    //         success: true,
+    //         message: 'Admissions retrieved successfully',
+    //         data: admissions,
+    //         count: admissions.length,
+    //     });
+    // }),
 
     getAdmissionById: catchAsync(async (req: Request, res: Response) => {
         const { id } = req.params;
