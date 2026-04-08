@@ -14,21 +14,24 @@ export const sanitizePhoneNumber = (input: string): string | null => {
         '৯': '9',
     };
 
-    // 1. Convert Bengali to English
-    let converted = input.replace(/[০-৯]/g, (d) => banglaToEnglishMap[d]);
+    // 1. Convert Bengali digits
+    const converted = input.replace(/[০-৯]/g, (d) => banglaToEnglishMap[d]);
 
-    // 2. REJECT if any English letters exist (e.g., 'o', 'x', etc.)
-    if (/[a-zA-Z]/.test(converted)) {
-        return null;
-    }
+    // 2. Reject if any English letters exist
+    if (/[a-zA-Z]/.test(converted)) return null;
 
-    // 3. Keep only digits (Removes +, -, spaces, brackets)
-    let pureNumbers = converted.replace(/\D/g, '');
+    // 3. Keep only digits
+    let digits = converted.replace(/\D/g, '');
 
-    // 4. Bangladesh Formatting
-    if (pureNumbers.startsWith('01') && pureNumbers.length === 11) {
-        pureNumbers = '88' + pureNumbers;
-    }
+    // 4. Normalize prefixes: remove leading '00', '88', or '+'
+    if (digits.startsWith('00')) digits = digits.slice(2);
+    if (digits.startsWith('88')) digits = digits.slice(2);
+    // Note: '+' already removed by \D, but just in case:
+    if (digits.startsWith('+')) digits = digits.slice(1);
 
-    return pureNumbers;
+    // 5. Must be exactly 11 digits and start with '01' followed by 3-9
+    if (!/^01[3-9]\d{8}$/.test(digits)) return null;
+
+    // 6. Return with '88' prefix
+    return '88' + digits;
 };
