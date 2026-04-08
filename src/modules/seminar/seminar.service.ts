@@ -67,16 +67,16 @@ const changeStatus = async (id: string, isActive: boolean): Promise<ISeminar> =>
 const getActiveSeminar = async (): Promise<ISeminar | null> => {
     try {
         const now = new Date();
+        // Subtract 6 hours to align stored UTC deadline with BD time
+        const sixHoursAgo = new Date(now.getTime() - 6 * 60 * 60 * 1000);
 
-        // Find seminar that is active and registration deadline hasn't passed
         const seminar = await Seminar.findOne({
             isActive: true,
-            registrationDeadline: { $gte: now },
-        }).sort({ date: 1 }); // Get the earliest upcoming seminar
+            registrationDeadline: { $gte: sixHoursAgo },
+        }).sort({ date: 1 });
 
         return seminar;
     } catch (error: any) {
-        // console.error('Database error in getActiveSeminar:', error);
         return null;
     }
 };

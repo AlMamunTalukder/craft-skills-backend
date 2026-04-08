@@ -16,9 +16,9 @@ const registerParticipant = async (data: any): Promise<{ message: string; partic
             throw new AppError(400, 'This seminar is not active for registration');
         }
 
-        // Check if registration deadline has passed
         const now = new Date();
-        if (now > seminar.registrationDeadline) {
+        const sixHoursAgo = new Date(now.getTime() - 6 * 60 * 60 * 1000);
+        if (sixHoursAgo > seminar.registrationDeadline) {
             throw new AppError(400, 'Registration deadline has passed');
         }
 
