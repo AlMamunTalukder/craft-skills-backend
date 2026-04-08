@@ -9,18 +9,7 @@ import { seminarConfirmationController } from '../seminar-confirmation/seminar-c
 
 const router = Router();
 
-// REMOVE auth middleware temporarily for testing
-router.post(
-    '/',
-    // auth(['admin']), // COMMENT THIS LINE OUT
-    validateRequest(createSeminarDto),
-    seminarController.createSeminar,
-);
-
-router.get('/', seminarController.getAllSeminars);
-router.get('/active', seminarController.getActiveSeminar);
-
-// IMPORTANT: Put specific routes BEFORE dynamic routes
+// Public routes (no auth)
 router.post('/register', validateRequest(registerParticipantDto), participantController.register);
 router.post(
     '/confirm',
@@ -28,14 +17,17 @@ router.post(
     seminarConfirmationController.confirmParticipation,
 );
 
-// Dynamic routes should come LAST
+// GET routes – specific ones BEFORE dynamic
+router.get('/', seminarController.getAllSeminars);
+router.get('/active', seminarController.getActiveSeminar);
+router.get('/pdf-seminar', seminarController.getPdfSeminar); // ✅ MOVED HERE (before /:id)
+
+// Dynamic routes (must be LAST)
 router.get('/:id', seminarController.getSeminarById);
-router.put(
-    '/:id',
-    // auth(['admin']), // COMMENT THIS LINE OUT
-    validateRequest(updateSeminarDto),
-    seminarController.updateSeminar,
-);
+
+// Admin routes (with auth if needed)
+router.post('/', validateRequest(createSeminarDto), seminarController.createSeminar);
+router.put('/:id', validateRequest(updateSeminarDto), seminarController.updateSeminar);
 router.put('/:id/status', seminarController.changeStatus);
 router.delete('/:id', seminarController.deleteSeminar);
 

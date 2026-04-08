@@ -89,4 +89,19 @@ export const seminarController = {
             data: seminar,
         });
     }),
+
+    getPdfSeminar: catchAsync(async (req: Request, res: Response) => {
+        const seminar = await seminarService.getPdfSeminar();
+        if (!seminar) {
+            return res.status(404).json({
+                success: false,
+                message: 'No seminar found for PDF download',
+            });
+        }
+        res.status(200).json({
+            success: true,
+            message: 'PDF seminar retrieved successfully',
+            data: seminar,
+        });
+    }),
 };

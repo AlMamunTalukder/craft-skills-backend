@@ -81,6 +81,26 @@ const getActiveSeminar = async (): Promise<ISeminar | null> => {
     }
 };
 
+const getPdfSeminar = async (): Promise<ISeminar | null> => {
+    try {
+        // Get all seminars, convert sl to number for sorting
+        const seminars = await Seminar.find({});
+        if (seminars.length === 0) return null;
+
+        // Sort by sl as number (descending), then by date descending
+        const sorted = seminars.sort((a, b) => {
+            const slA = parseInt(a.sl as string, 10) || 0;
+            const slB = parseInt(b.sl as string, 10) || 0;
+            if (slA !== slB) return slB - slA;
+            return new Date(b.date).getTime() - new Date(a.date).getTime();
+        });
+
+        return sorted[0];
+    } catch (error: any) {
+        return null;
+    }
+};
+
 export const seminarService = {
     createSeminar,
     getAllSeminars,
@@ -89,4 +109,5 @@ export const seminarService = {
     deleteSeminar,
     changeStatus,
     getActiveSeminar,
+    getPdfSeminar,
 };
