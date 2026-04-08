@@ -27,16 +27,19 @@ const updateSiteData = catchAsync(async (req, res) => {
 const updatePdfSettings = catchAsync(async (req, res) => {
     const { showPdfMenu } = req.body;
 
-    // Get current site data
+    // Get current site data (could be from cache or DB)
     let siteData = await siteService.getSiteData();
 
     if (!siteData) {
         throw new Error('Site data not found');
     }
 
+    // Safely convert to plain object (works for both Mongoose doc and cached plain object)
+    const siteDataPlain = siteData.toObject ? siteData.toObject() : siteData;
+
     // Update only the PDF settings
     const updatedData = {
-        ...siteData.toObject(),
+        ...siteDataPlain,
         showPdfMenu,
     };
 
