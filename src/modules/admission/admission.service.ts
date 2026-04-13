@@ -8,6 +8,7 @@ import { CourseBatch } from '../coursebatch/coursebatch.model';
 import logger from '@/shared/logger';
 import { appendDataToGoogleSheet } from '@/utils/googleSheets';
 import { redisConnection } from 'src/queues/connection';
+import { trackEvent } from 'src/utils/tracker';
 
 const admissionQueue = new Queue('admission-queue', {
     connection: redisConnection,
@@ -16,29 +17,36 @@ const admissionQueue = new Queue('admission-queue', {
 // Queue-based admission creation (for Google Sheets)
 export const queueAdmission = async (admissionData: any) => {
     try {
-        // Validate required fields
         if (!admissionData.courseId || !admissionData.batchId) {
+            await trackEvent({
+                event: 'registration_invalid',
+                data: { reason: 'missing_course_or_batch' },
+            });
+
             throw new Error('Course and Batch are required');
         }
 
-        // Add admission to queue for processing
         const job = await admissionQueue.add(
             'admission-registration',
-            {
-                admissionData,
-            },
+            { admissionData },
             {
                 attempts: 3,
-                backoff: {
-                    type: 'exponential',
-                    delay: 1000,
-                },
+                backoff: { type: 'exponential', delay: 1000 },
                 removeOnComplete: 100,
                 removeOnFail: 50,
             },
         );
 
-        logger.info(`Admission job ${job.id} queued for processing`);
+        // 🔥 TRACK QUEUE ADDED
+        await trackEvent({
+            event: 'registration_queued',
+            data: {
+                jobId: job.id,
+                phone: admissionData.phone,
+            },
+        });
+
+        logger.info(`Admission job ${job.id} queued`);
 
         return {
             jobId: job.id,
@@ -141,80 +149,6 @@ const createAdmission = async (admissionData: Partial<IAdmission>): Promise<IAdm
     }
 };
 
-// Google Sheets helper (optional, for sync version)
-async function sendAdmissionToGoogleSheets(admission: IAdmission, course: any, batch: any) {
-    try {
-        const registrationDate = new Date().toLocaleString('en-US', {
-            year: 'numeric',
-            month: 'long',
-            day: 'numeric',
-            hour: '2-digit',
-            minute: '2-digit',
-            hour12: true,
-        });
-
-        const discountAmount = admission.discountAmount || 0;
-        const baseAmount = admission.amount || course.price;
-        const paymentCharge = course.paymentCharge || 0;
-        const finalAmount = baseAmount - discountAmount + paymentCharge;
-
-        const sheetTitle = `${course.name.replace(/\s+/g, '-')}-Admissions`;
-
-        await appendDataToGoogleSheet(
-            sheetTitle,
-            [
-                'Name',
-                'Phone',
-                'WhatsApp',
-                'Email',
-                'Facebook',
-                'Occupation',
-                'Address',
-                'Course',
-                'Batch',
-                'Course Price',
-                'Payment Charge',
-                'Discount Amount',
-                'Final Amount',
-                'Payment Method',
-                'Sender Number',
-                'Coupon Code',
-                'Status',
-                'Payment Status',
-                'Notes',
-                'Registered At',
-            ],
-            [
-                admission.name || '',
-                admission.phone || '',
-                admission.whatsapp || '',
-                admission.email || '',
-                admission.facebook || '',
-                admission.occupation || '',
-                admission.address || '',
-                course.name || '',
-                batch.name || '',
-                course.price?.toString() || '0',
-                paymentCharge.toString() || '0',
-                discountAmount.toString() || '0',
-                finalAmount.toString() || '0',
-                admission.paymentMethod || '',
-                admission.senderNumber || '',
-                admission.couponCode || '',
-                admission.status || 'pending',
-                admission.paymentStatus || 'pending',
-                admission.notes || '',
-                registrationDate,
-            ],
-        );
-
-        logger.info(`Admission data sent to Google Sheets: ${sheetTitle}`);
-    } catch (error: any) {
-        logger.error('Failed to send admission to Google Sheets:', error);
-        // Don't throw error here - admission is already saved to DB
-    }
-}
-
 const updateAdmission = async (
     id: string,
     admissionData: Partial<IAdmission>,
@@ -278,5 +212,4 @@ export const admissionService = {
     deleteAdmission,
     updateAdmissionStatus,
     updatePaymentStatus,
-    sendAdmissionToGoogleSheets,
 };

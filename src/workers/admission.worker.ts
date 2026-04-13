@@ -9,12 +9,13 @@ import { CourseBatch } from 'src/modules/coursebatch/coursebatch.model';
 import { redisConnection } from 'src/queues/connection';
 import { sanitizePhoneNumber } from 'src/utils/phoneSanitizer';
 
+import { trackEvent } from '@/utils/tracker'; // ✅ ADD THIS
+
 new Worker(
     'admission-queue',
     async (job) => {
         const { admissionData } = job.data;
 
-        // --- CLEAN NUMBERS ---
         const cleanPhone = sanitizePhoneNumber(admissionData.phone) || admissionData.phone;
         const cleanWhatsapp = sanitizePhoneNumber(admissionData.whatsapp) || admissionData.whatsapp;
         const cleanSenderNumber =
@@ -26,7 +27,6 @@ new Worker(
         session.startTransaction();
 
         try {
-            // 1. Create admission record with CLEANED data
             const [admission] = await Admission.create(
                 [
                     {
@@ -39,7 +39,6 @@ new Worker(
                 { session },
             );
 
-            // 2. Fetch course and batch details
             const course = await Course.findById(admissionData.courseId).session(session);
             const batch = await CourseBatch.findById(admissionData.batchId).session(session);
 
@@ -49,7 +48,6 @@ new Worker(
             await session.commitTransaction();
             session.endSession();
 
-            // 3. Send to Google Sheet (English Pure Numbers)
             const registrationDate = new Date().toLocaleString('en-BD', {
                 timeZone: 'Asia/Dhaka',
                 year: 'numeric',
@@ -80,8 +78,8 @@ new Worker(
                 ],
                 [
                     admission.name || '',
-                    cleanPhone, // Pure English
-                    cleanWhatsapp, // Pure English
+                    cleanPhone,
+                    cleanWhatsapp,
                     admission.email || '',
                     admission.facebook || '',
                     course.name || '',
@@ -89,16 +87,39 @@ new Worker(
                     admission.couponCode || '',
                     (admission.amount || course.price).toString(),
                     admission.paymentMethod || '',
-                    cleanSenderNumber, // Pure English
+                    cleanSenderNumber,
                     registrationDate,
                 ],
             );
+
+            // 🔥🔥🔥 REAL SUCCESS TRACKING
+            await trackEvent({
+                event: 'registration_success',
+                data: {
+                    phone: cleanPhone,
+                    course: course.name,
+                    batch: batch.name,
+                    jobId: job.id,
+                },
+            });
 
             return admission;
         } catch (error: any) {
             await session.abortTransaction();
             session.endSession();
+
+            // ❌ FAILURE TRACKING
+            await trackEvent({
+                event: 'registration_failed',
+                data: {
+                    error: error.message,
+                    jobId: job.id,
+                    phone: admissionData.phone,
+                },
+            });
+
             logger.error(`Error in admission worker: ${error.message}`, { error });
+
             throw error;
         }
     },
