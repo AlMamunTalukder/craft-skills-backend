@@ -10,8 +10,8 @@ const toResponseDto = (coupon: any): CouponResponse => ({
     discountType: coupon.discountType,
     discount: coupon.discount,
     isActive: coupon.isActive,
-    validFrom: convertUTCToBD(coupon.validFrom),
-    validTo: convertUTCToBD(coupon.validTo),
+    validFrom: convertUTCToBD(coupon.validFrom), // Now handles any type
+    validTo: convertUTCToBD(coupon.validTo), // Now handles any type
     maxUsage: coupon.maxUsage,
     usedCount: coupon.usedCount,
     createdAt: coupon.createdAt,
