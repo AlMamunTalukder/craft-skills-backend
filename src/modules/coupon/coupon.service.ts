@@ -1,5 +1,6 @@
 // server/services/coupon.service.ts
 
+import { convertBDToUTC, convertUTCToBD } from 'src/utils/timezone';
 import type { CouponResponse, CreateCouponDto, UpdateCouponDto } from './coupon.dto';
 import { Coupon } from './coupon.model';
 
@@ -9,8 +10,8 @@ const toResponseDto = (coupon: any): CouponResponse => ({
     discountType: coupon.discountType,
     discount: coupon.discount,
     isActive: coupon.isActive,
-    validFrom: coupon.validFrom,
-    validTo: coupon.validTo,
+    validFrom: convertUTCToBD(coupon.validFrom),
+    validTo: convertUTCToBD(coupon.validTo),
     maxUsage: coupon.maxUsage,
     usedCount: coupon.usedCount,
     createdAt: coupon.createdAt,
@@ -46,11 +47,12 @@ const createCoupon = async (createDto: CreateCouponDto): Promise<CouponResponse>
         throw new Error('Coupon code already exists');
     }
 
+    // Convert BD time to UTC before saving
     const couponData = {
         ...createDto,
         code: createDto.code.toUpperCase(),
-        validFrom: new Date(createDto.validFrom),
-        validTo: new Date(createDto.validTo),
+        validFrom: convertBDToUTC(createDto.validFrom),
+        validTo: convertBDToUTC(createDto.validTo),
     };
 
     const coupon = new Coupon(couponData);
@@ -66,12 +68,13 @@ const updateCoupon = async (id: string, updateDto: UpdateCouponDto): Promise<Cou
         updateData.code = updateDto.code.toUpperCase();
     }
 
+    // Convert BD time to UTC before updating
     if (updateDto.validFrom) {
-        updateData.validFrom = new Date(updateDto.validFrom);
+        updateData.validFrom = convertBDToUTC(updateDto.validFrom);
     }
 
     if (updateDto.validTo) {
-        updateData.validTo = new Date(updateDto.validTo);
+        updateData.validTo = convertBDToUTC(updateDto.validTo);
     }
 
     const coupon = await Coupon.findByIdAndUpdate(id, updateData, {

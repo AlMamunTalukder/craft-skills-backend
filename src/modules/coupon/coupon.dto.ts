@@ -7,11 +7,11 @@ export const createCouponDto = z
         discountType: z.enum(['PERCENTAGE', 'AMOUNT']),
         discount: z.coerce.number().min(1, 'Discount must be at least 1'),
         isActive: z.boolean().optional().default(true),
-        validFrom: z.string().refine((val) => !isNaN(Date.parse(val)), {
-            message: 'Invalid valid from date format',
+        validFrom: z.string().refine((val) => /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}$/.test(val), {
+            message: 'Valid from must be in format YYYY-MM-DDTHH:mm (BD time)',
         }),
-        validTo: z.string().refine((val) => !isNaN(Date.parse(val)), {
-            message: 'Invalid valid to date format',
+        validTo: z.string().refine((val) => /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}$/.test(val), {
+            message: 'Valid to must be in format YYYY-MM-DDTHH:mm (BD time)',
         }),
         maxUsage: z.coerce.number().min(1).optional(),
     })
@@ -51,8 +51,8 @@ export interface CouponResponse {
     discountType: 'PERCENTAGE' | 'AMOUNT';
     discount: number;
     isActive: boolean;
-    validFrom: Date;
-    validTo: Date;
+    validFrom: string;
+    validTo: string;
     maxUsage?: number;
     usedCount: number;
     createdAt: Date;

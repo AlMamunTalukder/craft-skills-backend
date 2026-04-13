@@ -7,8 +7,8 @@ export interface ICoupon extends Document {
     discountType: 'PERCENTAGE' | 'AMOUNT';
     discount: number;
     isActive: boolean;
-    validFrom: Date;
-    validTo: Date;
+    validFrom: String;
+    validTo: String;
     maxUsage?: number;
     usedCount: number;
     createdAt: Date;
@@ -39,11 +39,11 @@ const CouponSchema = new Schema<ICoupon>(
             default: true,
         },
         validFrom: {
-            type: Date,
+            type: String,
             required: [true, 'Valid from date is required'],
         },
         validTo: {
-            type: Date,
+            type: String,
             required: [true, 'Valid to date is required'],
         },
         maxUsage: {
