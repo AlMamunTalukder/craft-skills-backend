@@ -1,4 +1,4 @@
-import { Schema, model, models } from 'mongoose';
+import { Schema, model, models } from 'mongoose'; 
 import type { ISite } from './site.interface';
 
 const siteSchema = new Schema<ISite>(

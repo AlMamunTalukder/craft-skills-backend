@@ -7,8 +7,8 @@ export interface ISite extends Document {
     logoHeader: string;
     logoFooter: string;
     // ADD THESE:
-    logoLight: string;
-    logoDark: string;
+    // logoLight: string;
+    // logoDark: string;
     tagline: string;
     address: string;
     phone1: string;
