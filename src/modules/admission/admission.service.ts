@@ -8,7 +8,7 @@ import { CourseBatch } from '../coursebatch/coursebatch.model';
 import logger from '@/shared/logger';
 import { appendDataToGoogleSheet } from '@/utils/googleSheets';
 import { redisConnection } from 'src/queues/connection';
-import { trackEvent } from 'src/utils/tracker';
+// import { trackEvent } from 'src/utils/tracker';
 
 const admissionQueue = new Queue('admission-queue', {
     connection: redisConnection,
@@ -17,14 +17,14 @@ const admissionQueue = new Queue('admission-queue', {
 // Queue-based admission creation (for Google Sheets)
 export const queueAdmission = async (admissionData: any) => {
     try {
-        if (!admissionData.courseId || !admissionData.batchId) {
-            await trackEvent({
-                event: 'registration_invalid',
-                data: { reason: 'missing_course_or_batch' },
-            });
+        // if (!admissionData.courseId || !admissionData.batchId) {
+        //     await trackEvent({
+        //         event: 'registration_invalid',
+        //         data: { reason: 'missing_course_or_batch' },
+        //     });
 
-            throw new Error('Course and Batch are required');
-        }
+        //     throw new Error('Course and Batch are required');
+        // }
 
         const job = await admissionQueue.add(
             'admission-registration',
@@ -38,13 +38,13 @@ export const queueAdmission = async (admissionData: any) => {
         );
 
         // 🔥 TRACK QUEUE ADDED
-        await trackEvent({
-            event: 'registration_queued',
-            data: {
-                jobId: job.id,
-                phone: admissionData.phone,
-            },
-        });
+        // await trackEvent({
+        //     event: 'registration_queued',
+        //     data: {
+        //         jobId: job.id,
+        //         phone: admissionData.phone,
+        //     },
+        // });
 
         logger.info(`Admission job ${job.id} queued`);
 

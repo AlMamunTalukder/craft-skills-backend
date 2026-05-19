@@ -27,8 +27,8 @@ new Worker(
                 [
                     {
                         ...participantData,
-                        phone: cleanPhone, // Saved as 8801306659464
-                        whatsapp: cleanWhatsapp, // Saved as 8801306659464
+                        phone: cleanPhone,
+                        whatsapp: cleanWhatsapp,
                     },
                 ],
                 { session },

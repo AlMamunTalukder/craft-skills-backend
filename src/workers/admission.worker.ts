@@ -9,7 +9,7 @@ import { CourseBatch } from 'src/modules/coursebatch/coursebatch.model';
 import { redisConnection } from 'src/queues/connection';
 import { sanitizePhoneNumber } from 'src/utils/phoneSanitizer';
 
-import { trackEvent } from '@/utils/tracker'; // ✅ ADD THIS
+// import { trackEvent } from '@/utils/tracker'; // ✅ ADD THIS
 
 new Worker(
     'admission-queue',
@@ -93,15 +93,15 @@ new Worker(
             );
 
             // 🔥🔥🔥 REAL SUCCESS TRACKING
-            await trackEvent({
-                event: 'registration_success',
-                data: {
-                    phone: cleanPhone,
-                    course: course.name,
-                    batch: batch.name,
-                    jobId: job.id,
-                },
-            });
+            // await trackEvent({
+            //     event: 'registration_success',
+            //     data: {
+            //         phone: cleanPhone,
+            //         course: course.name,
+            //         batch: batch.name,
+            //         jobId: job.id,
+            //     },
+            // });
 
             return admission;
         } catch (error: any) {
@@ -109,14 +109,14 @@ new Worker(
             session.endSession();
 
             // ❌ FAILURE TRACKING
-            await trackEvent({
-                event: 'registration_failed',
-                data: {
-                    error: error.message,
-                    jobId: job.id,
-                    phone: admissionData.phone,
-                },
-            });
+            // await trackEvent({
+            //     event: 'registration_failed',
+            //     data: {
+            //         error: error.message,
+            //         jobId: job.id,
+            //         phone: admissionData.phone,
+            //     },
+            // });
 
             logger.error(`Error in admission worker: ${error.message}`, { error });
 
