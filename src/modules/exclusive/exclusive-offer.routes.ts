@@ -18,4 +18,10 @@ router.post(
     exclusiveOfferController.register,
 );
 
+router.post('/payment/success', exclusiveOfferController.paymentSuccess);
+
+router.post('/payment/fail', exclusiveOfferController.paymentFail);
+
+router.post('/payment/cancel', exclusiveOfferController.paymentCancel);
+
 export const ExclusiveOfferRoutes = router;

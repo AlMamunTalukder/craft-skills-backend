@@ -10,9 +10,12 @@ export interface IExclusiveOfferParticipant extends Document {
     phone: string;
 
     courseTitle?: string;
-
     regularPrice?: number;
     offerPrice?: number;
+
+    paymentStatus?: 'pending' | 'success' | 'failed';
+    paymentMethod?: string;
+    transactionId?: string;
 
     createdAt: Date;
     updatedAt: Date;

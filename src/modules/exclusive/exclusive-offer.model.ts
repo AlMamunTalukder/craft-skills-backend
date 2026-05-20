@@ -39,6 +39,22 @@ const ExclusiveOfferParticipantSchema = new Schema<IExclusiveOfferParticipant>(
             type: Number,
             default: 190,
         },
+
+        paymentStatus: {
+            type: String,
+            enum: ['pending', 'success', 'failed'],
+            default: 'pending',
+        },
+
+        paymentMethod: {
+            type: String,
+            default: 'sslcommerz',
+        },
+
+        transactionId: {
+            type: String,
+            unique: true,
+        },
     },
     {
         timestamps: true,

@@ -5,16 +5,11 @@
 import { z } from 'zod';
 
 export const registerExclusiveOfferDto = z.object({
-    name: z.string().min(1, 'Name is required'),
-
-    email: z.string().email('Invalid email').optional().or(z.literal('')),
-
-    phone: z.string().min(1, 'Phone number is required'),
-
+    name: z.string().min(1),
+    email: z.string().email().optional().or(z.literal('')),
+    phone: z.string().min(1),
     courseTitle: z.string().optional(),
-
     regularPrice: z.number().optional(),
-
     offerPrice: z.number().optional(),
 });
 

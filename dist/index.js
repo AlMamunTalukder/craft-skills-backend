@@ -21,6 +21,7 @@ const redis_1 = require("./config/redis");
 require("./workers/participant.worker");
 require("./workers/admission.worker");
 require("./workers/seminar-confirmation.worker");
+require("./workers/exclusive-offer-queue.worker");
 (0, globalErrorHandlers_1.default)();
 const app = (0, express_1.default)();
 app.use((0, morgan_1.default)('dev'));
