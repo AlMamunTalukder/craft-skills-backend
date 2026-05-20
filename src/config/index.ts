@@ -55,7 +55,7 @@ export default {
     },
 
     // Frontend URL for redirects
-    frontendUrl: isProduction ? 'https://client.craftskillsbd.com' : 'http://localhost:3000',
+    frontendUrl: isProduction ? 'https://craftskillsbd.com' : 'http://localhost:3000',
 
     // API URL
     apiUrl: isProduction

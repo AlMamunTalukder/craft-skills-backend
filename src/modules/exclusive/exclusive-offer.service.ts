@@ -37,6 +37,11 @@ const registerParticipant = async (payload: any) => {
             currency: 'BDT',
             tran_id,
 
+            // success_url: `${process.env.CLIENT_URL}/exclusive-offer/success`,
+            // fail_url: `${CLIENT_URL}/exclusive-offer/fail`,
+            // cancel_url: `${FRONTEND_URL}/exclusive-offer/cancel`,
+            // ipn_url: `${BACKEND_URL}/api/v1/payment/ipn`,
+
             success_url: `${config.frontendUrl}/exclusive/success`,
             fail_url: `${config.frontendUrl}/exclusive/fail`,
             cancel_url: `${config.frontendUrl}/exclusive/cancel`,

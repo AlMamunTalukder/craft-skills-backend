@@ -7,6 +7,7 @@ import sendResponse from 'src/utils/sendResponse';
 
 import { exclusiveOfferService } from './exclusive-offer.service';
 import { ExclusiveOfferParticipant } from './exclusive-offer.model';
+import config from 'src/config';
 
 const register = catchAsync(async (req, res) => {
     const result = await exclusiveOfferService.registerParticipant(req.body);
@@ -22,19 +23,19 @@ const register = catchAsync(async (req, res) => {
 const paymentSuccess = catchAsync(async (req, res) => {
     // console.log('PAYMENT SUCCESS', req.body);
 
-    res.redirect(`${process.env.CLIENT_URL}/exclusive/success`);
+    res.redirect(`${config.frontendUrl}/exclusive/success`);
 });
 
 const paymentFail = catchAsync(async (req, res) => {
     // console.log('PAYMENT FAILED');
 
-    res.redirect(`${process.env.CLIENT_URL}/exclusive`);
+    res.redirect(`${config.frontendUrl}/exclusive/fail`);
 });
 
 const paymentCancel = catchAsync(async (req, res) => {
     // console.log('PAYMENT CANCELLED');
 
-    res.redirect(`${process.env.CLIENT_URL}/exclusive`);
+    res.redirect(`${config.frontendUrl}/exclusive/cancel`);
 });
 
 const ipn = async (req: any, res: any) => {
