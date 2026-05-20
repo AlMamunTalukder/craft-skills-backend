@@ -55,13 +55,19 @@ export default {
     },
 
     // Frontend URL for redirects
-    frontendUrl: isProduction ? 'https://craftskillsbd.com' : 'http://localhost:3000',
+    // frontendUrl: isProduction ? 'https://craftskillsbd.com' : 'http://localhost:3000',
+
+    frontendUrl:
+    process.env.FRONTEND_URL || 'http://localhost:3000',
 
     // API URL
-    apiUrl: isProduction
-        ? 'https://server.craftskillsbd.com/api/v1'
-        : 'http://localhost:5000/api/v1',
+    // apiUrl: isProduction
+    //     ? 'https://server.craftskillsbd.com/api/v1'
+    //     : 'http://localhost:5000/api/v1',
 
+    apiUrl:
+    process.env.API_URL || 'http://localhost:5000/api/v1',
+    
     // Trust proxy (important for production behind load balancer)
     trustProxy: isProduction,
 };
