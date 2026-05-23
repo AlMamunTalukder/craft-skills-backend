@@ -18,12 +18,15 @@ const register = catchAsync(async (req: Request, res: Response): Promise<void> =
 });
 
 const login = catchAsync((req: Request, res: Response, next: NextFunction): void => {
-    // Sanitize identifier if needed
+    // Sanitize identifier if it looks like a phone number
     let identifier = req.body.identifier;
     const isEmail = identifier.includes('@');
+
     if (!isEmail) {
         const sanitizedPhone = sanitizePhoneNumber(identifier);
-        if (sanitizedPhone) req.body.identifier = sanitizedPhone;
+        if (sanitizedPhone) {
+            req.body.identifier = sanitizedPhone;
+        }
     }
 
     passport.authenticate('local', (err: any, user: IUser, info: any) => {
@@ -39,90 +42,31 @@ const login = catchAsync((req: Request, res: Response, next: NextFunction): void
 
         req.logIn(user, (err) => {
             if (err) return next(err);
-            console.log('📝 Before save - sessionID:', req.sessionID);
 
-            // ✅ CRITICAL: Force session save before sending response
-            req.session.save((saveErr) => {
-                if (saveErr) {
-                    console.log('💾 After save - error:', saveErr);
-                    return next(saveErr);
-                }
+            // Return user data with batches - USING NEW PROPERTIES ONLY
+            const userData = {
+                id: user.id,
+                name: user.name,
+                email: user.email,
+                phone: user.phone,
+                role: user.role,
+                // Use only new properties (arrays)
+                batchNumbers: user.batchNumbers || [],
+                batchIds: user.batchIds || [],
+                currentBatchId: user.currentBatchId,
+                currentBatchNumber: user.currentBatchNumber,
+                admissionIds: user.admissionIds || [],
+            };
 
-                // Return user data
-                const userData = {
-                    id: user.id,
-                    name: user.name,
-                    email: user.email,
-                    phone: user.phone,
-                    role: user.role,
-                    batchNumbers: user.batchNumbers || [],
-                    batchIds: user.batchIds || [],
-                    currentBatchId: user.currentBatchId,
-                    currentBatchNumber: user.currentBatchNumber,
-                    admissionIds: user.admissionIds || [],
-                };
-
-                sendResponse(res, {
-                    statusCode: 200,
-                    success: true,
-                    message: 'Login successful',
-                    data: userData,
-                });
+            return sendResponse(res, {
+                statusCode: 200,
+                success: true,
+                message: 'Login successful',
+                data: userData,
             });
         });
     })(req, res, next);
 });
-
-// const login = catchAsync((req: Request, res: Response, next: NextFunction): void => {
-//     // Sanitize identifier if it looks like a phone number
-//     let identifier = req.body.identifier;
-//     const isEmail = identifier.includes('@');
-
-//     if (!isEmail) {
-//         const sanitizedPhone = sanitizePhoneNumber(identifier);
-//         if (sanitizedPhone) {
-//             req.body.identifier = sanitizedPhone;
-//         }
-//     }
-
-//     passport.authenticate('local', (err: any, user: IUser, info: any) => {
-//         if (err) return next(err);
-//         if (!user) {
-//             return sendResponse(res, {
-//                 statusCode: 401,
-//                 success: false,
-//                 message: info?.message || 'Login failed',
-//                 data: null,
-//             });
-//         }
-
-//         req.logIn(user, (err) => {
-//             if (err) return next(err);
-
-//             // Return user data with batches - USING NEW PROPERTIES ONLY
-//             const userData = {
-//                 id: user.id,
-//                 name: user.name,
-//                 email: user.email,
-//                 phone: user.phone,
-//                 role: user.role,
-//                 // Use only new properties (arrays)
-//                 batchNumbers: user.batchNumbers || [],
-//                 batchIds: user.batchIds || [],
-//                 currentBatchId: user.currentBatchId,
-//                 currentBatchNumber: user.currentBatchNumber,
-//                 admissionIds: user.admissionIds || [],
-//             };
-
-//             return sendResponse(res, {
-//                 statusCode: 200,
-//                 success: true,
-//                 message: 'Login successful',
-//                 data: userData,
-//             });
-//         });
-//     })(req, res, next);
-// });
 
 const logout = catchAsync(async (req: Request, res: Response) => {
     // Passport logout

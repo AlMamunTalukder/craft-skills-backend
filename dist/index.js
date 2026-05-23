@@ -24,14 +24,9 @@ require("./workers/seminar-confirmation.worker");
 require("./workers/exclusive-offer-queue.worker");
 (0, globalErrorHandlers_1.default)();
 const app = (0, express_1.default)();
-const mongoStore = connect_mongo_1.default.create({
-    mongoUrl: index_2.default.databaseUrl,
-    ttl: 24 * 60 * 60,
-    autoRemove: 'native',
-});
-// mongoStore.on('error', (error) => {
-//     console.error('❌ Session store error:', error);
-// });
+if (index_2.default.env === 'production') {
+    app.set('trust proxy', 1);
+}
 app.use((0, morgan_1.default)('dev'));
 app.use((0, cors_1.default)({
     origin: [
@@ -53,19 +48,22 @@ app.use(express_1.default.urlencoded({ limit: '50mb', extended: true }));
 // Enhanced session configuration
 app.use((0, express_session_1.default)({
     secret: index_2.default.sessionSecret,
-    resave: true, // ⚠️ Temporarily set to true
-    saveUninitialized: true, // ⚠️ Temporarily set to true
-    store: mongoStore,
+    resave: false,
+    saveUninitialized: false,
+    store: connect_mongo_1.default.create({
+        mongoUrl: index_2.default.databaseUrl,
+        ttl: 24 * 60 * 60,
+    }),
     name: 'craftskills.session',
     cookie: {
-        httpOnly: false,
-        secure: index_2.default.env === 'production',
-        sameSite: index_2.default.env === 'production' ? 'none' : 'lax',
+        httpOnly: true,
+        secure: true,
+        sameSite: 'none',
+        domain: '.craftskillsbd.com',
         maxAge: 24 * 60 * 60 * 1000,
-        domain: index_2.default.env === 'production' ? '.craftskillsbd.com' : undefined,
         path: '/',
     },
-    proxy: index_2.default.env === 'production',
+    proxy: true,
 }));
 // app.use(
 //     session({
@@ -85,9 +83,6 @@ app.use((0, express_session_1.default)({
 //         proxy: config.env === 'production',
 //     }),
 // );
-if (index_2.default.env === 'production') {
-    app.set('trust proxy', 1);
-}
 app.use(passport_1.default.initialize());
 app.use(passport_1.default.session());
 app.use('/api/v1', index_1.default);
