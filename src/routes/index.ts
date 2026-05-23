@@ -15,7 +15,7 @@ import { studentAttendanceRoutes } from 'src/modules/studentAttendance/studentAt
 import { SeminarConfirmationRoutes } from 'src/modules/seminar-confirmation/seminar-confirmation.routes';
 import { reviewRoutes } from 'src/modules/review/review.routes';
 import { ExclusiveOfferRoutes } from 'src/modules/exclusive/exclusive-offer.routes';
-import { ExclusiveOfferSettingsRoutes } from 'src/modules/exclusive/exclusive-offer-settings.routes';
+import { ExclusiveBatchRoutes } from 'src/modules/exclusive/exclusive-batch.routes';
 
 const router = Router();
 
@@ -74,8 +74,8 @@ const moduleRoutes = [
         route: ExclusiveOfferRoutes,
     },
     {
-        path: '/',
-        route: ExclusiveOfferSettingsRoutes,
+        path: '/exclusive-batches',
+        route: ExclusiveBatchRoutes,
     },
 
     {

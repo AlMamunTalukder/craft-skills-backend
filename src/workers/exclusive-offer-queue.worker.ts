@@ -40,12 +40,15 @@ new Worker(
 
             logger.info('📤 Attempting to append to Google Sheets...');
 
+            // Update the Google Sheet append to include whatsapp and occupation
             await appendDataToGoogleSheet(
                 'Exclusive Offer Course',
                 [
                     'Name',
                     'Phone',
+                    'WhatsApp',
                     'Email',
+                    'Occupation',
                     'Course',
                     'Offer Price',
                     'Transaction ID',
@@ -55,7 +58,9 @@ new Worker(
                 [
                     participant.name,
                     cleanPhone,
-                    participant.email,
+                    participant.whatsapp || '',
+                    participant.email || '',
+                    participant.occupation || '',
                     participant.courseTitle,
                     String(participant.offerPrice),
                     participantData.transactionId || '',

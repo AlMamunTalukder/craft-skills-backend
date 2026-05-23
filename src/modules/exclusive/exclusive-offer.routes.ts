@@ -24,11 +24,12 @@ router.post('/payment/fail', exclusiveOfferController.paymentFail);
 
 router.post('/payment/cancel', exclusiveOfferController.paymentCancel);
 
-// router.get(
-//     '/admin/exclusive-offer/participants',
-//     isAuthenticated,
-//     isAdmin,
-//     exclusiveOfferController.getParticipants,
-// );
+router.get('/admin/exclusive-offer/participants', exclusiveOfferController.getParticipants);
+
+router.get(
+    '/admin/exclusive-offer/participants',
+
+    exclusiveOfferController.getParticipants,
+);
 
 export const ExclusiveOfferRoutes = router;
