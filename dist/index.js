@@ -46,48 +46,44 @@ app.use(requestLogger_1.default);
 app.use(express_1.default.json({ limit: '50mb' }));
 app.use(express_1.default.urlencoded({ limit: '50mb', extended: true }));
 // Enhanced session configuration
-app.use((0, express_session_1.default)({
-    secret: index_2.default.sessionSecret,
-    resave: false,
-    saveUninitialized: false,
-    store: connect_mongo_1.default.create({
-        mongoUrl: index_2.default.databaseUrl,
-        ttl: 24 * 60 * 60,
-    }),
-    name: 'craftskills.session',
-    cookie: {
-        httpOnly: true,
-        secure: true,
-        sameSite: 'none',
-        domain: '.craftskillsbd.com',
-        maxAge: 24 * 60 * 60 * 1000,
-        path: '/',
-    },
-    proxy: true,
-}));
 // app.use(
 //     session({
 //         secret: config.sessionSecret,
 //         resave: false,
 //         saveUninitialized: false,
-//         store: MongoStore.create({ mongoUrl: config.databaseUrl, ttl: 24 * 60 * 60 }),
+//         store: MongoStore.create({
+//             mongoUrl: config.databaseUrl,
+//             ttl: 24 * 60 * 60,
+//         }),
 //         name: 'craftskills.session',
 //         cookie: {
-//             httpOnly: true,
-//             secure: config.env === 'production',
-//             sameSite: config.env === 'production' ? 'none' : 'lax',
+//             httpOnly: false,
+//             // secure: true,
+//             secure: false, //forlocallyitsfalse
+//             sameSite: 'none',
+//             domain: '.craftskillsbd.com',
 //             maxAge: 24 * 60 * 60 * 1000,
-//             domain: config.env === 'production' ? '.craftskillsbd.com' : undefined,
 //             path: '/',
 //         },
-//         proxy: config.env === 'production',
+//         proxy: true,
 //     }),
 // );
-app.use((req, res, next) => {
-    // console.log('req.secure =', req.secure);
-    // console.log('x-forwarded-proto =', req.headers['x-forwarded-proto']);
-    next();
-});
+app.use((0, express_session_1.default)({
+    secret: index_2.default.sessionSecret,
+    resave: false,
+    saveUninitialized: false,
+    store: connect_mongo_1.default.create({ mongoUrl: index_2.default.databaseUrl, ttl: 24 * 60 * 60 }),
+    name: 'craftskills.session',
+    cookie: {
+        httpOnly: true,
+        secure: index_2.default.env === 'production',
+        sameSite: index_2.default.env === 'production' ? 'none' : 'lax',
+        maxAge: 24 * 60 * 60 * 1000,
+        domain: index_2.default.env === 'production' ? '.craftskillsbd.com' : undefined,
+        path: '/',
+    },
+    proxy: index_2.default.env === 'production',
+}));
 app.use(passport_1.default.initialize());
 app.use(passport_1.default.session());
 app.use('/api/v1', index_1.default);
