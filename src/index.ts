@@ -39,10 +39,10 @@ app.use(
             'https://www.craftskillsbd.com',
             'https://admin.craftskillsbd.com',
         ],
-        methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
         credentials: true,
+        methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
         allowedHeaders: ['Content-Type', 'Authorization', 'Cookie', 'X-Requested-With'],
-        exposedHeaders: ['set-cookie'],
+        // exposedHeaders: ['set-cookie'],
     }),
 );
 
@@ -95,6 +95,12 @@ app.use(
 //         proxy: config.env === 'production',
 //     }),
 // );
+
+app.use((req, res, next) => {
+    // console.log('req.secure =', req.secure);
+    // console.log('x-forwarded-proto =', req.headers['x-forwarded-proto']);
+    next();
+});
 
 app.use(passport.initialize());
 app.use(passport.session());

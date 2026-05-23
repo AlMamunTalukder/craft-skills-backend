@@ -37,10 +37,10 @@ app.use((0, cors_1.default)({
         'https://www.craftskillsbd.com',
         'https://admin.craftskillsbd.com',
     ],
-    methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
     credentials: true,
+    methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
     allowedHeaders: ['Content-Type', 'Authorization', 'Cookie', 'X-Requested-With'],
-    exposedHeaders: ['set-cookie'],
+    // exposedHeaders: ['set-cookie'],
 }));
 app.use(requestLogger_1.default);
 app.use(express_1.default.json({ limit: '50mb' }));
@@ -83,6 +83,11 @@ app.use((0, express_session_1.default)({
 //         proxy: config.env === 'production',
 //     }),
 // );
+app.use((req, res, next) => {
+    console.log('req.secure =', req.secure);
+    console.log('x-forwarded-proto =', req.headers['x-forwarded-proto']);
+    next();
+});
 app.use(passport_1.default.initialize());
 app.use(passport_1.default.session());
 app.use('/api/v1', index_1.default);
