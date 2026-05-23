@@ -24,6 +24,14 @@ require("./workers/seminar-confirmation.worker");
 require("./workers/exclusive-offer-queue.worker");
 (0, globalErrorHandlers_1.default)();
 const app = (0, express_1.default)();
+const mongoStore = connect_mongo_1.default.create({
+    mongoUrl: index_2.default.databaseUrl,
+    ttl: 24 * 60 * 60,
+    autoRemove: 'native',
+});
+// mongoStore.on('error', (error) => {
+//     console.error('❌ Session store error:', error);
+// });
 app.use((0, morgan_1.default)('dev'));
 app.use((0, cors_1.default)({
     origin: [
@@ -45,12 +53,12 @@ app.use(express_1.default.urlencoded({ limit: '50mb', extended: true }));
 // Enhanced session configuration
 app.use((0, express_session_1.default)({
     secret: index_2.default.sessionSecret,
-    resave: false,
-    saveUninitialized: false,
-    store: connect_mongo_1.default.create({ mongoUrl: index_2.default.databaseUrl, ttl: 24 * 60 * 60 }),
+    resave: true, // ⚠️ Temporarily set to true
+    saveUninitialized: true, // ⚠️ Temporarily set to true
+    store: mongoStore,
     name: 'craftskills.session',
     cookie: {
-        httpOnly: true,
+        httpOnly: false,
         secure: index_2.default.env === 'production',
         sameSite: index_2.default.env === 'production' ? 'none' : 'lax',
         maxAge: 24 * 60 * 60 * 1000,
@@ -59,6 +67,24 @@ app.use((0, express_session_1.default)({
     },
     proxy: index_2.default.env === 'production',
 }));
+// app.use(
+//     session({
+//         secret: config.sessionSecret,
+//         resave: false,
+//         saveUninitialized: false,
+//         store: MongoStore.create({ mongoUrl: config.databaseUrl, ttl: 24 * 60 * 60 }),
+//         name: 'craftskills.session',
+//         cookie: {
+//             httpOnly: true,
+//             secure: config.env === 'production',
+//             sameSite: config.env === 'production' ? 'none' : 'lax',
+//             maxAge: 24 * 60 * 60 * 1000,
+//             domain: config.env === 'production' ? '.craftskillsbd.com' : undefined,
+//             path: '/',
+//         },
+//         proxy: config.env === 'production',
+//     }),
+// );
 if (index_2.default.env === 'production') {
     app.set('trust proxy', 1);
 }

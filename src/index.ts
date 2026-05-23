@@ -23,6 +23,16 @@ setupGlobalErrorHandlers();
 
 const app: Application = express();
 
+const mongoStore = MongoStore.create({
+    mongoUrl: config.databaseUrl,
+    ttl: 24 * 60 * 60,
+    autoRemove: 'native',
+});
+
+// mongoStore.on('error', (error) => {
+//     console.error('❌ Session store error:', error);
+// });
+
 app.use(morgan('dev'));
 
 app.use(
@@ -50,12 +60,12 @@ app.use(express.urlencoded({ limit: '50mb', extended: true }));
 app.use(
     session({
         secret: config.sessionSecret,
-        resave: false,
-        saveUninitialized: false,
-        store: MongoStore.create({ mongoUrl: config.databaseUrl, ttl: 24 * 60 * 60 }),
+        resave: true, // ⚠️ Temporarily set to true
+        saveUninitialized: true, // ⚠️ Temporarily set to true
+        store: mongoStore,
         name: 'craftskills.session',
         cookie: {
-            httpOnly: true,
+            httpOnly: false,
             secure: config.env === 'production',
             sameSite: config.env === 'production' ? 'none' : 'lax',
             maxAge: 24 * 60 * 60 * 1000,
@@ -65,6 +75,24 @@ app.use(
         proxy: config.env === 'production',
     }),
 );
+// app.use(
+//     session({
+//         secret: config.sessionSecret,
+//         resave: false,
+//         saveUninitialized: false,
+//         store: MongoStore.create({ mongoUrl: config.databaseUrl, ttl: 24 * 60 * 60 }),
+//         name: 'craftskills.session',
+//         cookie: {
+//             httpOnly: true,
+//             secure: config.env === 'production',
+//             sameSite: config.env === 'production' ? 'none' : 'lax',
+//             maxAge: 24 * 60 * 60 * 1000,
+//             domain: config.env === 'production' ? '.craftskillsbd.com' : undefined,
+//             path: '/',
+//         },
+//         proxy: config.env === 'production',
+//     }),
+// );
 
 if (config.env === 'production') {
     app.set('trust proxy', 1);
