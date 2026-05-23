@@ -37,7 +37,7 @@ const ExclusiveOfferParticipantSchema = new Schema<IExclusiveOfferParticipant>(
 
         offerPrice: {
             type: Number,
-            default: 190,
+            default: 199,
         },
 
         paymentStatus: {

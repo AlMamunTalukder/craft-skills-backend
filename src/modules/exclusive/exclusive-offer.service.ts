@@ -25,7 +25,7 @@ const registerParticipant = async (payload: any) => {
             transactionId: tran_id, // worker will use this
             courseTitle: payload.courseTitle || 'Exclusive Offer Masterclass',
             regularPrice: payload.regularPrice || 5500,
-            offerPrice: payload.offerPrice || 190,
+            offerPrice: payload.offerPrice || 199,
         };
 
         // 4. Add job to BullMQ queue (non-blocking)
@@ -33,7 +33,7 @@ const registerParticipant = async (payload: any) => {
 
         // 5. Prepare SSLCommerz data
         const sslData = {
-            total_amount: Number(payload.offerPrice || 190),
+            total_amount: Number(payload.offerPrice || 199),
             currency: 'BDT',
             tran_id,
 
