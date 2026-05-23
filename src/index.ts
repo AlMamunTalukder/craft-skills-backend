@@ -65,7 +65,7 @@ app.use(
         store: mongoStore,
         name: 'craftskills.session',
         cookie: {
-            httpOnly: false,
+            httpOnly: true,
             secure: config.env === 'production',
             sameSite: config.env === 'production' ? 'none' : 'lax',
             maxAge: 24 * 60 * 60 * 1000,
