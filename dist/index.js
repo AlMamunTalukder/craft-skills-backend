@@ -84,8 +84,8 @@ app.use((0, express_session_1.default)({
 //     }),
 // );
 app.use((req, res, next) => {
-    console.log('req.secure =', req.secure);
-    console.log('x-forwarded-proto =', req.headers['x-forwarded-proto']);
+    // console.log('req.secure =', req.secure);
+    // console.log('x-forwarded-proto =', req.headers['x-forwarded-proto']);
     next();
 });
 app.use(passport_1.default.initialize());

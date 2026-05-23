@@ -77,7 +77,7 @@ const moduleRoutes = [
         path: '/',
         route: ExclusiveOfferSettingsRoutes,
     },
-    
+
     {
         path: '/courses',
         route: courseRoutes,

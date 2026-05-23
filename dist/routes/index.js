@@ -20,6 +20,7 @@ const studentAttendance_routes_1 = require("../modules/studentAttendance/student
 const seminar_confirmation_routes_1 = require("../modules/seminar-confirmation/seminar-confirmation.routes");
 const review_routes_1 = require("../modules/review/review.routes");
 const exclusive_offer_routes_1 = require("../modules/exclusive/exclusive-offer.routes");
+const exclusive_offer_settings_routes_1 = require("../modules/exclusive/exclusive-offer-settings.routes");
 const router = (0, express_1.Router)();
 // Debug route to see all registered routes
 router.get('/debug-routes', (req, res) => {
@@ -72,6 +73,10 @@ const moduleRoutes = [
     {
         path: '/exclusive-offer',
         route: exclusive_offer_routes_1.ExclusiveOfferRoutes,
+    },
+    {
+        path: '/',
+        route: exclusive_offer_settings_routes_1.ExclusiveOfferSettingsRoutes,
     },
     {
         path: '/courses',

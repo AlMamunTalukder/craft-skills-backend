@@ -51,10 +51,20 @@ const ipn = async (req: any, res: any) => {
     res.sendStatus(200);
 };
 
+const getParticipants = catchAsync(async (req, res) => {
+    const participants = await ExclusiveOfferParticipant.find().sort({ createdAt: -1 });
+    sendResponse(res, {
+        success: true,
+        statusCode: 200,
+        data: participants,
+    });
+});
+
 export const exclusiveOfferController = {
     register,
     paymentSuccess,
     paymentFail,
     paymentCancel,
     ipn,
+    getParticipants,
 };
