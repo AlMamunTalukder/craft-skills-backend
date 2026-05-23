@@ -39,11 +39,12 @@ const login = catchAsync((req: Request, res: Response, next: NextFunction): void
 
         req.logIn(user, (err) => {
             if (err) return next(err);
+             console.log('📝 Before save - sessionID:', req.sessionID);
 
             // ✅ CRITICAL: Force session save before sending response
             req.session.save((saveErr) => {
                 if (saveErr) {
-                    // console.error('Session save error:', saveErr);
+                  console.log('💾 After save - error:', saveErr);
                     return next(saveErr);
                 }
 

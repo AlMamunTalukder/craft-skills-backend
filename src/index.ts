@@ -75,6 +75,13 @@ app.use(
         proxy: config.env === 'production',
     }),
 );
+
+
+app.use((req, res, next) => {
+  console.log('🔍 Session ID after middleware:', req.sessionID);
+  console.log('🔍 Session object:', req.session);
+  next();
+});
 // app.use(
 //     session({
 //         secret: config.sessionSecret,
