@@ -35,6 +35,10 @@ const mongoStore = MongoStore.create({
 
 app.use(morgan('dev'));
 
+if (config.env === 'production') {
+    app.set('trust proxy', 1);
+}
+
 app.use(
     cors({
         origin: [
@@ -60,27 +64,28 @@ app.use(express.urlencoded({ limit: '50mb', extended: true }));
 app.use(
     session({
         secret: config.sessionSecret,
-        resave: true, // ⚠️ Temporarily set to true
-        saveUninitialized: true, // ⚠️ Temporarily set to true
+        resave: false,
+        saveUninitialized: false,
         store: mongoStore,
         name: 'craftskills.session',
+
         cookie: {
             httpOnly: true,
-            secure: config.env === 'production',
-            sameSite: config.env === 'production' ? 'none' : 'lax',
+            secure: true,
+            sameSite: 'none',
             maxAge: 24 * 60 * 60 * 1000,
-            domain: config.env === 'production' ? '.craftskillsbd.com' : undefined,
+            domain: '.craftskillsbd.com',
             path: '/',
         },
-        proxy: config.env === 'production',
+
+        proxy: true,
     }),
 );
 
-
 app.use((req, res, next) => {
-  console.log('🔍 Session ID after middleware:', req.sessionID);
-  console.log('🔍 Session object:', req.session);
-  next();
+    console.log('🔍 Session ID after middleware:', req.sessionID);
+    console.log('🔍 Session object:', req.session);
+    next();
 });
 // app.use(
 //     session({
@@ -100,10 +105,6 @@ app.use((req, res, next) => {
 //         proxy: config.env === 'production',
 //     }),
 // );
-
-if (config.env === 'production') {
-    app.set('trust proxy', 1);
-}
 
 app.use(passport.initialize());
 app.use(passport.session());
