@@ -15,6 +15,7 @@ import { studentAttendanceRoutes } from 'src/modules/studentAttendance/studentAt
 import { SeminarConfirmationRoutes } from 'src/modules/seminar-confirmation/seminar-confirmation.routes';
 import { reviewRoutes } from 'src/modules/review/review.routes';
 import { ExclusiveOfferRoutes } from 'src/modules/exclusive/exclusive-offer.routes';
+import { ExclusiveOfferSettingsRoutes } from 'src/modules/exclusive/exclusive-offer-settings.routes';
 
 const router = Router();
 
@@ -72,6 +73,11 @@ const moduleRoutes = [
         path: '/exclusive-offer',
         route: ExclusiveOfferRoutes,
     },
+    {
+        path: '/',
+        route: ExclusiveOfferSettingsRoutes,
+    },
+    
     {
         path: '/courses',
         route: courseRoutes,
