@@ -44,7 +44,7 @@ exports.default = {
     port: process.env.PORT || 5000,
     databaseUrl: process.env.DATABASE_URL || 'mongodb://localhost:27017/craft-skills',
     sessionSecret: process.env.SESSION_SECRET || 'default-secret',
-    env: process.env.NODE_ENV || 'development',
+    env: process.env.NODE_ENV || 'production',
     redisHost: process.env.REDIS_HOST || 'redis://localhost:6379',
     // Cloudinary
     CLOUDINARY_CLOUD_NAME: process.env.CLOUDINARY_CLOUD_NAME || '',
@@ -84,11 +84,13 @@ exports.default = {
         path: '/',
     },
     // Frontend URL for redirects
-    frontendUrl: isProduction ? 'https://client.craftskillsbd.com' : 'http://localhost:3000',
+    // frontendUrl: isProduction ? 'https://craftskillsbd.com' : 'http://localhost:3000',
+    frontendUrl: process.env.FRONTEND_URL || 'http://localhost:3000',
     // API URL
-    apiUrl: isProduction
-        ? 'https://server.craftskillsbd.com/api/v1'
-        : 'http://localhost:5000/api/v1',
+    // apiUrl: isProduction
+    //     ? 'https://server.craftskillsbd.com/api/v1'
+    //     : 'http://localhost:5000/api/v1',
+    apiUrl: process.env.API_URL || 'http://localhost:5000/api/v1',
     // Trust proxy (important for production behind load balancer)
     trustProxy: isProduction,
 };
