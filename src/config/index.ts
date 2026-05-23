@@ -9,7 +9,7 @@ export default {
     port: process.env.PORT || 5000,
     databaseUrl: process.env.DATABASE_URL || 'mongodb://localhost:27017/craft-skills',
     sessionSecret: process.env.SESSION_SECRET || 'default-secret',
-    env: process.env.NODE_ENV || 'development',
+    env: process.env.NODE_ENV || 'production',
     redisHost: process.env.REDIS_HOST || 'redis://localhost:6379',
 
     // Cloudinary
