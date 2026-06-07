@@ -188,79 +188,170 @@ export const admissionPaymentController = {
     }),
 
     // Payment success callback
+    // server/modules/admission/admission-payment.controller.ts
+
     paymentSuccess: catchAsync(async (req: Request, res: Response) => {
+        // console.log('🎉 Payment Success Callback Received');
+        // console.log('📦 Full body:', JSON.stringify(req.body, null, 2));
+
         const { tran_id, val_id, amount, card_type } = req.body;
-        const { value_a, value_b, value_c, value_d } = req.body;
 
-        // Parse stored data
-        const extraData = JSON.parse(value_d || '{}');
+        // Get values from SSLCommerz callback
+        const value_a = req.body.value_a || ''; // name
+        const value_b = req.body.value_b || ''; // phone
+        const value_c = req.body.value_c || ''; // email
+        const value_d = req.body.value_d || '{}'; // JSON string with extra data
 
-        // Validate payment with SSLCommerz (IMPORTANT!)
+        // console.log('📋 Values:', { value_a, value_b, value_c, value_d });
+
+        // Parse stored data with error handling
+        let extraData: any = {};
+        try {
+            if (value_d && value_d !== '{}') {
+                // Clean the JSON string
+                let cleanJson = value_d.trim();
+
+                // Try to parse
+                extraData = JSON.parse(cleanJson);
+                // console.log('✅ Parsed extraData:', extraData);
+            } else {
+                // console.warn('⚠️ value_d is empty or not provided');
+            }
+        } catch (parseError: any) {
+            // console.error('❌ Failed to parse value_d:', {
+            //     error: parseError.message,
+            //     rawValue: value_d,
+            // });
+        }
+
+        // Validate payment with SSLCommerz
         const sslcz = new SSLCommerzPayment(
             process.env.STORE_ID as string,
             process.env.STORE_PASS as string,
-            config.env !== 'production',
+            true, // Match your working exclusive offer setting
         );
 
         try {
-            // Verify the payment is valid
+            // console.log('🔍 Validating payment...');
             const validation = await sslcz.validate({ val_id });
+            // console.log('✅ Validation:', validation.status);
 
             if (validation.status !== 'VALID' && validation.status !== 'VALIDATED') {
-                logger.error('Payment validation failed:', { tran_id, validation });
-                return res.redirect(`${config.frontendUrl}/admission-registration/fail`);
+                // console.error('❌ Payment validation failed');
+                return res.redirect(`https://craftskillsbd.com/admission-registration/fail`);
             }
 
-            // Payment verified - now save directly to database
+            // Prepare admission data
             const admissionData = {
-                name: value_a,
-                phone: value_b,
+                name: value_a || 'Unknown',
+                phone: value_b || '',
                 email: value_c || '',
-                whatsapp: extraData.whatsapp || '',
-                facebook: extraData.facebook || '',
-                courseId: extraData.courseId,
-                batchId: extraData.batchId,
-                amount: extraData.originalAmount || amount, // Store original price
-                discountAmount: extraData.discountAmount || 0,
-                couponCode: extraData.couponCode || '',
-                senderNumber: extraData.senderNumber || '',
-                paymentMethod: extraData.paymentMethod || card_type || 'sslcommerz',
+                whatsapp: extraData?.whatsapp || '',
+                facebook: extraData?.facebook || '',
+                courseId: extraData?.courseId,
+                batchId: extraData?.batchId,
+                amount: extraData?.originalAmount || parseFloat(amount) || 0,
+                discountAmount: extraData?.discountAmount || 0,
+                couponCode: extraData?.couponCode || '',
+                senderNumber: extraData?.senderNumber || value_b || '',
+                paymentMethod: extraData?.paymentMethod || card_type || 'sslcommerz',
                 paymentStatus: 'paid',
                 status: 'pending',
                 transactionId: tran_id,
                 sslValidationId: val_id,
-                notes: extraData.isTestPayment
-                    ? `Test payment: Paid 1 TK (Original price: ${extraData.originalAmount} TK)`
-                    : '',
             };
 
-            // Save to database directly
-            const admission = await Admission.create(admissionData);
+            // console.log('💾 Saving admission:', admissionData);
 
-            // Increment coupon usage count if coupon was used
-            if (extraData.couponCode) {
+            // Save to database
+            const admission = await Admission.create(admissionData);
+            // console.log('✅ Admission saved:', admission._id);
+
+            // Increment coupon usage
+            if (extraData?.couponCode) {
                 await Coupon.findOneAndUpdate(
                     { code: extraData.couponCode.toUpperCase() },
                     { $inc: { usedCount: 1 } },
                 );
             }
 
-            logger.info(
-                `Admission created after payment: ${admission._id} | Test: ${extraData.isTestPayment || false}`,
-            );
+            // Optional: Google Sheets
+            try {
+                const { appendDataToGoogleSheet } = await import('@/utils/googleSheets');
+                const { sanitizePhoneNumber } = await import('@/utils/phoneSanitizer');
 
-            // Redirect to success page
+                const batch = await CourseBatch.findById(extraData?.batchId);
+                const course = await Course.findById(extraData?.courseId);
+
+                const cleanPhone = sanitizePhoneNumber(value_b) || value_b;
+                const cleanWhatsapp = sanitizePhoneNumber(extraData?.whatsapp) || '';
+
+                const registrationDate = new Date().toLocaleString('en-BD', {
+                    timeZone: 'Asia/Dhaka',
+                    year: 'numeric',
+                    month: 'long',
+                    day: 'numeric',
+                    hour: '2-digit',
+                    minute: '2-digit',
+                    hour12: true,
+                });
+
+                await appendDataToGoogleSheet(
+                    `${batch?.name || 'Admission'} - admission`,
+                    [
+                        'Name',
+                        'Phone',
+                        'WhatsApp',
+                        'Email',
+                        'Facebook',
+                        'Course',
+                        'Batch',
+                        'Coupon Code',
+                        'Amount',
+                        'Payment Method',
+                        'Sender Number',
+                        'Payment Status',
+                        'Transaction ID',
+                        'Registered At',
+                    ],
+                    [
+                        value_a,
+                        cleanPhone,
+                        cleanWhatsapp,
+                        value_c,
+                        extraData?.facebook || '',
+                        course?.name || extraData?.courseName || '',
+                        batch?.name || extraData?.batchName || '',
+                        extraData?.couponCode || '',
+                        (extraData?.originalAmount || amount).toString(),
+                        extraData?.paymentMethod || card_type || 'sslcommerz',
+                        extraData?.senderNumber || value_b || '',
+                        'paid',
+                        tran_id,
+                        registrationDate,
+                    ],
+                );
+                // console.log('✅ Google Sheet updated');
+            } catch (sheetError) {
+                // console.error('❌ Google Sheets update failed:', sheetError);
+            }
+
+            // ============ REDIRECT TO FRONTEND SUCCESS PAGE ============
             const successUrl = new URL(`${config.frontendUrl}/admission-registration/success`);
-            successUrl.searchParams.set('name', value_a);
-            successUrl.searchParams.set('amount', extraData.originalAmount?.toString() || amount);
-            successUrl.searchParams.set('courseId', extraData.courseId);
-            successUrl.searchParams.set('phone', value_b);
+            successUrl.searchParams.set('name', encodeURIComponent(value_a));
+            successUrl.searchParams.set('amount', extraData?.originalAmount?.toString() || amount);
+            successUrl.searchParams.set('paid', amount); // Actual paid amount
+            successUrl.searchParams.set('courseId', extraData?.courseId || '');
+            successUrl.searchParams.set('phone', value_b || '');
             successUrl.searchParams.set('email', value_c || '');
             successUrl.searchParams.set('tran_id', tran_id);
+            successUrl.searchParams.set('status', 'success');
 
+            // console.log('🔗 Redirecting to:', successUrl.toString());
             return res.redirect(successUrl.toString());
-        } catch (error) {
-            logger.error('Payment success processing failed:', error);
+        } catch (error: any) {
+            // console.error('❌ Payment processing failed:', error);
+            logger.error('Payment processing failed:', error);
             return res.redirect(`${config.frontendUrl}/admission-registration/fail`);
         }
     }),
