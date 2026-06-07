@@ -16,6 +16,8 @@ export interface IAdmission extends Document {
     couponCode?: string;
     amount?: number;
     discountAmount?: number;
+    transactionId?: string;
+    sslValidationId?: string;
     status: 'pending' | 'approved' | 'rejected' | 'waitlisted';
     paymentStatus: 'pending' | 'partial' | 'paid' | 'cancelled';
     result?: string; // Add this field
@@ -105,6 +107,15 @@ const AdmissionSchema = new Schema<IAdmission>(
             type: Number,
             min: 0,
             default: 0,
+        },
+        transactionId: {
+            type: String,
+            unique: true,
+            sparse: true, // Allows null values
+            index: true,
+        },
+        sslValidationId: {
+            type: String,
         },
         status: {
             type: String,

@@ -2,7 +2,7 @@ import AppError from 'src/errors/AppError';
 import SSLCommerzPayment from 'sslcommerz-lts';
 import config from 'src/config';
 import { sanitizePhoneNumber } from 'src/utils/phoneSanitizer';
-import { exclusiveOfferQueue } from 'src/queues/exclusiveOffer.queue';
+// import { exclusiveOfferQueue } from 'src/queues/exclusiveOffer.queue';
 import { ExclusiveBatch } from './exclusive-batch.model';
 
 const registerParticipant = async (payload: any) => {
@@ -33,55 +33,103 @@ const registerParticipant = async (payload: any) => {
         const tran_id = `EXCL_${Date.now()}_${Math.random().toString(36).substr(2, 8)}`;
 
         // 5. Prepare data for the queue (worker will save to DB and update Google Sheet)
-        const participantData = {
-            name: payload.name,
-            email: payload.email || '',
-            phone: cleanPhone,
-            whatsapp: cleanWhatsapp,
-            occupation: payload.occupation || '',
-            batchId: batch._id,
-            batchNo: batch.batchNo,
-            courseTitle: batch.title,
-            regularPrice: 5500,
-            offerPrice: batch.offerPrice,
-            paymentStatus: 'pending',
-            paymentMethod: 'sslcommerz',
-            transactionId: tran_id,
-        };
+        // const participantData = {
+        //     name: payload.name,
+        //     email: payload.email || '',
+        //     phone: cleanPhone,
+        //     whatsapp: cleanWhatsapp,
+        //     occupation: payload.occupation || '',
+        //     batchId: batch._id,
+        //     batchNo: batch.batchNo,
+        //     courseTitle: batch.title,
+        //     regularPrice: 5500,
+        //     offerPrice: batch.offerPrice,
+        //     paymentStatus: 'pending',
+        //     paymentMethod: 'sslcommerz',
+        //     transactionId: tran_id,
+        // };
 
-        // 6. Add job to BullMQ queue
-        await exclusiveOfferQueue.add('register', { participantData });
+        // // 6. Add job to BullMQ queue
+        // await exclusiveOfferQueue.add('register', { participantData });
 
         // 7. Prepare SSLCommerz data
         const sslData = {
             total_amount: Number(batch.offerPrice),
             currency: 'BDT',
             tran_id,
-            success_url: `${config.frontendUrl}/exclusive/success`,
-            fail_url: `${config.frontendUrl}/exclusive/fail`,
-            cancel_url: `${config.frontendUrl}/exclusive/cancel`,
+
+            // Backend callback URLs
+            success_url: `${config.apiUrl}/exclusive-offer/payment-success`,
+            fail_url: `${config.apiUrl}/exclusive-offer/payment-fail`,
+            cancel_url: `${config.apiUrl}/exclusive-offer/payment-cancel`,
             ipn_url: `${config.apiUrl}/exclusive-offer/ipn`,
+
+            // User data
+            value_a: payload.name,
+            value_b: cleanPhone,
+            value_c: payload.email || '',
+
+            // Store everything needed after successful payment
+            value_d: JSON.stringify({
+                whatsapp: cleanWhatsapp,
+                occupation: payload.occupation || '',
+
+                batchId: batch._id.toString(),
+                batchNo: batch.batchNo,
+
+                courseTitle: batch.title,
+
+                regularPrice: 5500,
+                offerPrice: batch.offerPrice,
+            }),
+
             shipping_method: 'NO',
+
             product_name: batch.title,
             product_category: 'Education',
             product_profile: 'general',
+
             cus_name: payload.name,
             cus_email: payload.email || 'noemail@example.com',
             cus_add1: 'Dhaka',
             cus_city: 'Dhaka',
             cus_country: 'Bangladesh',
             cus_phone: cleanPhone,
+
             ship_name: payload.name,
             ship_add1: 'Dhaka',
             ship_city: 'Dhaka',
             ship_country: 'Bangladesh',
         };
+        // const sslData = {
+        //     total_amount: Number(batch.offerPrice),
+        //     currency: 'BDT',
+        //     tran_id,
+        //     success_url: `${config.frontendUrl}/exclusive/success`,
+        //     fail_url: `${config.frontendUrl}/exclusive/fail`,
+        //     cancel_url: `${config.frontendUrl}/exclusive/cancel`,
+        //     ipn_url: `${config.apiUrl}/exclusive-offer/ipn`,
+        //     shipping_method: 'NO',
+        //     product_name: batch.title,
+        //     product_category: 'Education',
+        //     product_profile: 'general',
+        //     cus_name: payload.name,
+        //     cus_email: payload.email || 'noemail@example.com',
+        //     cus_add1: 'Dhaka',
+        //     cus_city: 'Dhaka',
+        //     cus_country: 'Bangladesh',
+        //     cus_phone: cleanPhone,
+        //     ship_name: payload.name,
+        //     ship_add1: 'Dhaka',
+        //     ship_city: 'Dhaka',
+        //     ship_country: 'Bangladesh',
+        // };
 
         // 8. Initialize SSLCommerz payment
         const sslcz = new SSLCommerzPayment(
             process.env.STORE_ID as string,
             process.env.STORE_PASS as string,
-            true,
+            true, // or false for production
         );
 
         const apiResponse = await sslcz.init(sslData);

@@ -15,6 +15,5 @@ router.get('/:id', exclusiveBatchController.getBatchById);
 router.put('/:id', validateRequest(updateExclusiveBatchDto), exclusiveBatchController.updateBatch);
 router.put('/:id/status', exclusiveBatchController.toggleBatchStatus);
 router.delete('/:id', exclusiveBatchController.deleteBatch);
-router.get('/active', exclusiveBatchController.getActiveBatch);
 
 export const ExclusiveBatchRoutes = router;
