@@ -15,9 +15,16 @@ export const admissionPaymentController = {
     // Initiate payment
     initiatePayment: catchAsync(async (req: Request, res: Response) => {
         const {
-            name, phone, email, whatsapp, facebook,
-            courseId, batchId, couponCode, senderNumber,
-            paymentMethod
+            name,
+            phone,
+            email,
+            whatsapp,
+            facebook,
+            courseId,
+            batchId,
+            couponCode,
+            senderNumber,
+            paymentMethod,
         } = req.body;
 
         console.log('🚀 Payment Init:', { name, phone, courseId, batchId });
@@ -36,7 +43,9 @@ export const admissionPaymentController = {
         }
 
         let finalAmount = Math.round(
-            course.price - (course.price * (course.discount || 0)) / 100 + (course.paymentCharge || 0)
+            course.price -
+                (course.price * (course.discount || 0)) / 100 +
+                (course.paymentCharge || 0),
         );
 
         let discountAmount = 0;
@@ -155,7 +164,12 @@ export const admissionPaymentController = {
             const value_c = req.body.value_c || '';
             const value_d = req.body.value_d || '{}';
 
-            console.log('📋 Data:', { value_a, value_b, value_c, value_d: value_d.substring(0, 100) });
+            console.log('📋 Data:', {
+                value_a,
+                value_b,
+                value_c,
+                value_d: value_d.substring(0, 100),
+            });
 
             // Parse value_d
             let extraData: any = {};
@@ -221,7 +235,7 @@ export const admissionPaymentController = {
             // Delete any partial IPN record
             await Admission.deleteOne({
                 transactionId: tran_id,
-                name: { $exists: false }
+                name: { $exists: false },
             });
 
             // Save to database
@@ -232,7 +246,7 @@ export const admissionPaymentController = {
             if (extraData.couponCode) {
                 await Coupon.findOneAndUpdate(
                     { code: extraData.couponCode.toUpperCase() },
-                    { $inc: { usedCount: 1 } }
+                    { $inc: { usedCount: 1 } },
                 );
             }
 
@@ -241,25 +255,49 @@ export const admissionPaymentController = {
                 const { appendDataToGoogleSheet } = await import('@/utils/googleSheets');
                 const { sanitizePhoneNumber } = await import('@/utils/phoneSanitizer');
 
-                const batch = extraData.batchId ? await CourseBatch.findById(extraData.batchId) : null;
-                const course = extraData.courseId ? await Course.findById(extraData.courseId) : null;
+                const batch = extraData.batchId
+                    ? await CourseBatch.findById(extraData.batchId)
+                    : null;
+                const course = extraData.courseId
+                    ? await Course.findById(extraData.courseId)
+                    : null;
 
                 const cleanPhone = sanitizePhoneNumber(value_b) || value_b;
                 const cleanWhatsapp = sanitizePhoneNumber(extraData.whatsapp) || '';
 
                 const registrationDate = new Date().toLocaleString('en-BD', {
                     timeZone: 'Asia/Dhaka',
-                    year: 'numeric', month: 'long', day: 'numeric',
-                    hour: '2-digit', minute: '2-digit', hour12: true,
+                    year: 'numeric',
+                    month: 'long',
+                    day: 'numeric',
+                    hour: '2-digit',
+                    minute: '2-digit',
+                    hour12: true,
                 });
 
                 await appendDataToGoogleSheet(
                     `${batch?.name || extraData.batchName || 'Admission'} - admission`,
-                    ['Name', 'Phone', 'WhatsApp', 'Email', 'Facebook', 'Course', 'Batch',
-                        'Coupon Code', 'Amount', 'Payment Method', 'Sender Number',
-                        'Payment Status', 'Transaction ID', 'Registered At'],
                     [
-                        value_a, cleanPhone, cleanWhatsapp, value_c,
+                        'Name',
+                        'Phone',
+                        'WhatsApp',
+                        'Email',
+                        'Facebook',
+                        'Course',
+                        'Batch',
+                        'Coupon Code',
+                        'Amount',
+                        'Payment Method',
+                        'Sender Number',
+                        'Payment Status',
+                        'Transaction ID',
+                        'Registered At',
+                    ],
+                    [
+                        value_a,
+                        cleanPhone,
+                        cleanWhatsapp,
+                        value_c,
                         extraData.facebook || '',
                         course?.name || extraData.courseName || '',
                         batch?.name || extraData.batchName || '',
@@ -267,7 +305,9 @@ export const admissionPaymentController = {
                         String(extraData.originalAmount || amount),
                         extraData.paymentMethod || card_type || 'sslcommerz',
                         extraData.senderNumber || value_b || '',
-                        'paid', tran_id, registrationDate,
+                        'paid',
+                        tran_id,
+                        registrationDate,
                     ],
                 );
                 console.log('✅ Google Sheet updated');
@@ -289,7 +329,6 @@ export const admissionPaymentController = {
             const redirectUrl = `${FRONTEND_URL}/admission-registration/success?${params.toString()}`;
             console.log('🔗 Redirect:', redirectUrl);
             return res.redirect(redirectUrl);
-
         } catch (error: any) {
             console.error('❌ FATAL ERROR:', error.message);
             console.error('❌ Stack:', error.stack);
@@ -316,7 +355,7 @@ export const admissionPaymentController = {
             if (existing) {
                 await Admission.findOneAndUpdate(
                     { transactionId: tran_id },
-                    { paymentStatus: 'paid', sslValidationId: val_id }
+                    { paymentStatus: 'paid', sslValidationId: val_id },
                 );
                 console.log('✅ IPN updated');
             } else {
