@@ -12,7 +12,6 @@ import { Coupon } from '../coupon/coupon.model';
 const FRONTEND_URL = 'https://craftskillsbd.com';
 
 export const admissionPaymentController = {
-    // Initiate payment
     initiatePayment: catchAsync(async (req: Request, res: Response) => {
         const {
             name,
