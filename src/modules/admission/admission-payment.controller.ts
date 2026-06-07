@@ -164,62 +164,52 @@ export const admissionPaymentController = {
 
             console.log('📋 Looking up:', lookupTranId);
 
-            // ✅ Find using collection (bypasses model validation)
             const mongoose = require('mongoose');
             const collection = mongoose.connection.db.collection('admissions');
 
-            const existingAdmission = await collection.findOne({ transactionId: lookupTranId });
+            let existingAdmission = await collection.findOne({ transactionId: lookupTranId });
 
             if (!existingAdmission) {
                 console.error('❌ No pending admission found for:', lookupTranId);
-
-                // Try to create a basic record anyway
-                try {
-                    await collection.insertOne({
-                        name: req.body.value_b ? 'Unknown' : 'Unknown',
-                        phone: req.body.value_b || '',
-                        email: req.body.value_c || '',
-                        transactionId: lookupTranId,
-                        sslValidationId: val_id,
-                        amount: parseFloat(amount) || 0,
-                        paymentMethod: card_type || 'sslcommerz',
-                        paymentStatus: 'paid',
-                        status: 'pending',
-                        registeredAt: new Date(),
-                        createdAt: new Date(),
-                        updatedAt: new Date(),
-                    });
-                    console.log('✅ Created basic record');
-                } catch (e: any) {
-                    console.error('❌ Could not create:', e.message);
-                }
-
                 return res.redirect(`${FRONTEND_URL}/admission-registration/fail`);
             }
 
             console.log('✅ Found admission:', existingAdmission._id);
+            console.log('📋 Current name:', existingAdmission.name);
 
-            // ✅ Update payment status
+            // ✅ Update payment status BUT preserve the original name
             await collection.updateOne(
                 { transactionId: lookupTranId },
                 {
                     $set: {
                         paymentStatus: 'paid',
                         sslValidationId: val_id,
-                        paymentMethod: card_type || existingAdmission.paymentMethod,
+                        paymentMethod: card_type || existingAdmission.paymentMethod || 'sslcommerz',
+                        // ✅ Only update name if it's "Pending (IPN)" or empty
+                        ...((existingAdmission.name === 'Pending (IPN)' ||
+                            !existingAdmission.name) &&
+                        req.body.value_b
+                            ? {}
+                            : {}),
                         updatedAt: new Date(),
                     },
                 },
             );
 
-            console.log('✅ Updated to paid');
+            // Fetch the updated record
+            existingAdmission = await collection.findOne({ transactionId: lookupTranId });
+            console.log('✅ Updated. Name is now:', existingAdmission.name);
 
             // Update coupon
             if (existingAdmission.couponCode) {
-                await Coupon.findOneAndUpdate(
-                    { code: existingAdmission.couponCode.toUpperCase() },
-                    { $inc: { usedCount: 1 } },
-                );
+                try {
+                    await Coupon.findOneAndUpdate(
+                        { code: existingAdmission.couponCode.toUpperCase() },
+                        { $inc: { usedCount: 1 } },
+                    );
+                } catch (e: any) {
+                    console.log('⚠️ Coupon update failed:', e.message);
+                }
             }
 
             // Google Sheets
@@ -262,7 +252,7 @@ export const admissionPaymentController = {
                         batch?.name || '',
                         existingAdmission.couponCode || '',
                         String(existingAdmission.amount || amount),
-                        card_type || existingAdmission.paymentMethod || 'sslcommerz',
+                        existingAdmission.paymentMethod || card_type || 'sslcommerz',
                         existingAdmission.senderNumber || '',
                         'paid',
                         lookupTranId,
@@ -309,15 +299,29 @@ export const admissionPaymentController = {
 
         if ((status === 'VALID' || status === 'VALIDATED') && tran_id) {
             try {
-                await admissionPaymentService.saveAdmission({
-                    transactionId: tran_id,
-                    sslValidationId: val_id,
-                    paymentStatus: 'paid',
-                    status: 'pending',
-                    name: 'Pending (IPN)',
-                    registeredAt: new Date(),
-                });
-                console.log('✅ IPN processed:', tran_id);
+                const mongoose = require('mongoose');
+                const collection = mongoose.connection.db.collection('admissions');
+
+                // Check if record already exists
+                const existing = await collection.findOne({ transactionId: tran_id });
+
+                if (existing) {
+                    // ✅ Only update payment status, DON'T change name
+                    await collection.updateOne(
+                        { transactionId: tran_id },
+                        {
+                            $set: {
+                                paymentStatus: 'paid',
+                                sslValidationId: val_id,
+                                updatedAt: new Date(),
+                            },
+                        },
+                    );
+                    console.log('✅ IPN: Updated payment status for', tran_id);
+                } else {
+                    console.log('⚠️ IPN: No record found, waiting for success callback');
+                    // Don't create a record - let the success callback handle it
+                }
             } catch (e: any) {
                 console.error('❌ IPN error:', e.message);
             }
