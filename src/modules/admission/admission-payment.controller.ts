@@ -77,7 +77,6 @@ export const admissionPaymentController = {
             if (finalAmount < 10) finalAmount = 10;
             const tran_id = `ADM_${Date.now()}_${Math.random().toString(36).substr(2, 8)}`;
 
-            // ✅ STEP 1: Save pending admission BEFORE payment
             await Admission.create({
                 name,
                 phone,
