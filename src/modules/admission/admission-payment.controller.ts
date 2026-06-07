@@ -52,8 +52,8 @@ export const admissionPaymentController = {
         // 2. Calculate actual price
         let finalAmount = Math.round(
             course.price -
-                (course.price * (course.discount || 0)) / 100 +
-                (course.paymentCharge || 0),
+            (course.price * (course.discount || 0)) / 100 +
+            (course.paymentCharge || 0),
         );
 
         let discountAmount = 0;
@@ -104,8 +104,8 @@ export const admissionPaymentController = {
             'TK (Original:',
             Math.round(
                 course.price -
-                    (course.price * (course.discount || 0)) / 100 +
-                    (course.paymentCharge || 0),
+                (course.price * (course.discount || 0)) / 100 +
+                (course.paymentCharge || 0),
             ),
             'TK)',
         );
@@ -179,7 +179,7 @@ export const admissionPaymentController = {
 
             console.log('✅ Payment URL generated:', apiResponse.GatewayPageURL);
 
-            // Return payment URL to frontend
+
             res.status(200).json({
                 success: true,
                 message: 'Payment initiated',
