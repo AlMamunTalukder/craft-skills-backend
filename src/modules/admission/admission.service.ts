@@ -1,4 +1,3 @@
-/* eslint-disable no-console */
 import { Queue } from 'bullmq';
 import mongoose from 'mongoose';
 import AppError from 'src/errors/AppError';

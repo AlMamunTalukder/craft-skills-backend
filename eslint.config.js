@@ -29,7 +29,7 @@ module.exports = [
             '@typescript-eslint/no-namespace': 'off',
             '@typescript-eslint/explicit-function-return-type': 'off',
             '@typescript-eslint/consistent-type-imports': 'off',
-            'no-console': 'warn',
+            'no-console': 'off',
             'no-useless-escape': 'off',
             'lines-between-class-members': ['error', 'always'],
             'padding-line-between-statements': [
