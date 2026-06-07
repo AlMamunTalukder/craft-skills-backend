@@ -6,6 +6,8 @@ import { Course } from '../course/course.model';
 import { CourseBatch } from '../coursebatch/coursebatch.model';
 import AppError from 'src/errors/AppError';
 import { admissionPaymentService } from './admission-payment.service';
+import { Admission } from './admission.model';
+import { Coupon } from '../coupon/coupon.model';
 
 const FRONTEND_URL = 'https://craftskillsbd.com';
 
@@ -39,11 +41,62 @@ export const admissionPaymentController = {
                 throw new AppError(400, 'Registration deadline passed');
             }
 
-            // Use service to calculate price
-            const { finalAmount, discountAmount, appliedCoupon } =
-                await admissionPaymentService.calculatePrice(courseId, couponCode);
+            let finalAmount = Math.round(
+                course.price -
+                    (course.price * (course.discount || 0)) / 100 +
+                    (course.paymentCharge || 0),
+            );
+            let discountAmount = 0;
+            let appliedCoupon = null;
 
+            if (couponCode) {
+                const coupon = await Coupon.findOne({
+                    code: couponCode.toUpperCase(),
+                    isActive: true,
+                });
+                if (coupon) {
+                    const validFrom = new Date(coupon.validFrom as string);
+                    const validTo = new Date(coupon.validTo as string);
+                    if (
+                        now >= validFrom &&
+                        now <= validTo &&
+                        (!coupon.maxUsage || coupon.usedCount < coupon.maxUsage)
+                    ) {
+                        if (coupon.discountType === 'PERCENTAGE') {
+                            discountAmount = (finalAmount * coupon.discount) / 100;
+                        } else {
+                            discountAmount = coupon.discount;
+                        }
+                        discountAmount = Math.min(discountAmount, finalAmount);
+                        finalAmount = Math.max(0, finalAmount - discountAmount);
+                        appliedCoupon = couponCode;
+                    }
+                }
+            }
+
+            if (finalAmount < 10) finalAmount = 10;
             const tran_id = `ADM_${Date.now()}_${Math.random().toString(36).substr(2, 8)}`;
+
+            // ✅ STEP 1: Save pending admission BEFORE payment
+            await Admission.create({
+                name,
+                phone,
+                email: email || '',
+                whatsapp: whatsapp || '',
+                facebook: facebook || '',
+                courseId,
+                batchId,
+                amount: finalAmount,
+                discountAmount,
+                couponCode: appliedCoupon || '',
+                senderNumber: senderNumber || '',
+                paymentMethod: paymentMethod || 'sslcommerz',
+                paymentStatus: 'pending',
+                status: 'pending',
+                transactionId: tran_id,
+                registeredAt: new Date(),
+            });
+            console.log('✅ Pending admission saved with tran_id:', tran_id);
 
             const sslData = {
                 total_amount: finalAmount,
@@ -53,22 +106,9 @@ export const admissionPaymentController = {
                 fail_url: `${config.apiUrl}/admissions/payment/fail`,
                 cancel_url: `${config.apiUrl}/admissions/payment/cancel`,
                 ipn_url: `${config.apiUrl}/admissions/payment/ipn`,
-                value_a: name,
+                value_a: tran_id, // ✅ ONLY send tran_id - we'll look it up later
                 value_b: phone,
                 value_c: email || '',
-                value_d: JSON.stringify({
-                    whatsapp: whatsapp || '',
-                    facebook: facebook || '',
-                    courseId,
-                    batchId,
-                    batchName: batch.name,
-                    courseName: course.name,
-                    originalAmount: finalAmount,
-                    discountAmount,
-                    couponCode: appliedCoupon || '',
-                    senderNumber: senderNumber || '',
-                    paymentMethod: paymentMethod || 'sslcommerz',
-                }),
                 shipping_method: 'NO',
                 product_name: course.name,
                 product_category: 'Education',
@@ -92,9 +132,8 @@ export const admissionPaymentController = {
             );
             const apiResponse = await sslcz.init(sslData);
 
-            if (!apiResponse?.GatewayPageURL) {
+            if (!apiResponse?.GatewayPageURL)
                 throw new AppError(500, 'Gateway initialization failed');
-            }
 
             console.log('✅ Payment URL generated');
             res.status(200).json({
@@ -114,90 +153,108 @@ export const admissionPaymentController = {
 
         try {
             const { tran_id, val_id, amount, card_type } = req.body;
-            const value_a = req.body.value_a || '';
-            const value_b = req.body.value_b || '';
-            const value_c = req.body.value_c || '';
-            const value_d = req.body.value_d || '{}';
 
-            // Parse value_d using service
-            const extraData = admissionPaymentService.parseValueD(value_d, { amount });
+            // ✅ value_a now contains the tran_id
+            const lookupTranId = req.body.value_a || tran_id;
 
-            // Build admission data
-            const admissionData = {
-                name: value_a || 'Unknown',
-                phone: value_b || '',
-                email: value_c || '',
-                whatsapp: extraData.whatsapp || '',
-                facebook: extraData.facebook || '',
-                courseId: extraData.courseId || null,
-                batchId: extraData.batchId || null,
-                amount: Number(extraData.originalAmount || amount || 0),
-                discountAmount: Number(extraData.discountAmount || 0),
-                couponCode: extraData.couponCode || '',
-                senderNumber: extraData.senderNumber || value_b || '',
-                paymentMethod: extraData.paymentMethod || card_type || 'sslcommerz',
-                paymentStatus: 'paid',
-                status: 'pending',
-                transactionId: tran_id,
-                sslValidationId: val_id,
-                registeredAt: new Date(),
-            };
+            console.log('📋 Looking up:', lookupTranId);
 
-            console.log('💾 Saving:', admissionData.name, admissionData.phone);
+            // ✅ Find the existing pending admission
+            const existingAdmission = await Admission.findOne({ transactionId: lookupTranId });
 
-            // Save to database
-            await admissionPaymentService.saveAdmission(admissionData);
-
-            // Update coupon
-            await admissionPaymentService.updateCouponUsage(extraData.couponCode);
-
-            // Save to Google Sheets
-            await admissionPaymentService.saveToGoogleSheet({
-                ...admissionData,
-                batchName: extraData.batchName,
-                courseName: extraData.courseName,
-                phone: value_b,
-                email: value_c,
-                facebook: extraData.facebook,
-            });
-
-            // Build success URL
-            const successUrl = admissionPaymentService.buildSuccessUrl({
-                name: value_a,
-                amount: extraData.originalAmount || amount,
-                paid: amount,
-                courseId: extraData.courseId,
-                phone: value_b,
-                email: value_c,
-                tran_id: tran_id,
-            });
-
-            console.log('🔗 Redirecting to SUCCESS');
-            return res.redirect(successUrl);
-        } catch (error: any) {
-            console.error('❌ ERROR:', error.message);
-
-            // Fallback: save basic data
-            try {
-                if (req.body.tran_id) {
-                    await admissionPaymentService.saveAdmission({
-                        name: req.body.value_a || 'Unknown',
-                        phone: req.body.value_b || '',
-                        email: req.body.value_c || '',
-                        transactionId: req.body.tran_id,
-                        sslValidationId: req.body.val_id,
-                        amount: Number(req.body.amount) || 0,
-                        paymentStatus: 'paid',
-                        status: 'pending',
-                        registeredAt: new Date(),
-                    });
-                }
-                return res.redirect(
-                    `${FRONTEND_URL}/admission-registration/success?tran_id=${req.body.tran_id || ''}`,
-                );
-            } catch (e: any) {
+            if (!existingAdmission) {
+                console.error('❌ No pending admission found for:', lookupTranId);
                 return res.redirect(`${FRONTEND_URL}/admission-registration/fail`);
             }
+
+            console.log('✅ Found pending admission:', existingAdmission._id);
+
+            // ✅ Update payment status
+            existingAdmission.paymentStatus = 'paid';
+            existingAdmission.sslValidationId = val_id;
+            existingAdmission.paymentMethod = card_type || existingAdmission.paymentMethod;
+            await existingAdmission.save();
+
+            console.log('✅ Updated to paid:', existingAdmission._id);
+
+            // Update coupon
+            if (existingAdmission.couponCode) {
+                await Coupon.findOneAndUpdate(
+                    { code: existingAdmission.couponCode.toUpperCase() },
+                    { $inc: { usedCount: 1 } },
+                );
+            }
+
+            // Google Sheets
+            try {
+                const { appendDataToGoogleSheet } = await import('@/utils/googleSheets');
+                const { sanitizePhoneNumber } = await import('@/utils/phoneSanitizer');
+
+                const batch = await CourseBatch.findById(existingAdmission.batchId);
+                const course = await Course.findById(existingAdmission.courseId);
+
+                const cleanPhone =
+                    sanitizePhoneNumber(existingAdmission.phone) || existingAdmission.phone;
+                const cleanWhatsapp = sanitizePhoneNumber(existingAdmission.whatsapp) || '';
+
+                await appendDataToGoogleSheet(
+                    `${batch?.name || 'Admission'} - admission`,
+                    [
+                        'Name',
+                        'Phone',
+                        'WhatsApp',
+                        'Email',
+                        'Facebook',
+                        'Course',
+                        'Batch',
+                        'Coupon Code',
+                        'Amount',
+                        'Payment Method',
+                        'Sender Number',
+                        'Payment Status',
+                        'Transaction ID',
+                        'Registered At',
+                    ],
+                    [
+                        existingAdmission.name,
+                        cleanPhone,
+                        cleanWhatsapp,
+                        existingAdmission.email || '',
+                        existingAdmission.facebook || '',
+                        course?.name || '',
+                        batch?.name || '',
+                        existingAdmission.couponCode || '',
+                        String(existingAdmission.amount || amount),
+                        existingAdmission.paymentMethod || card_type || 'sslcommerz',
+                        existingAdmission.senderNumber || '',
+                        'paid',
+                        lookupTranId,
+                        new Date().toLocaleString('en-BD', { timeZone: 'Asia/Dhaka' }),
+                    ],
+                );
+                console.log('✅ Sheet updated');
+            } catch (sheetError: any) {
+                console.error('❌ Sheet error:', sheetError.message);
+            }
+
+            // Redirect to success
+            const params = new URLSearchParams({
+                name: existingAdmission.name,
+                amount: String(existingAdmission.amount || amount),
+                paid: String(amount),
+                courseId: existingAdmission.courseId?.toString() || '',
+                phone: existingAdmission.phone || '',
+                email: existingAdmission.email || '',
+                tran_id: lookupTranId,
+            });
+
+            console.log('🔗 SUCCESS');
+            return res.redirect(
+                `${FRONTEND_URL}/admission-registration/success?${params.toString()}`,
+            );
+        } catch (error: any) {
+            console.error('❌ ERROR:', error.message);
+            return res.redirect(`${FRONTEND_URL}/admission-registration/fail`);
         }
     },
 
