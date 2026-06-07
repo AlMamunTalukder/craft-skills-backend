@@ -10,20 +10,14 @@ import logger from 'src/shared/logger';
 import { Admission } from './admission.model';
 import { Coupon } from '../coupon/coupon.model';
 
+
 export const admissionPaymentController = {
     // Initiate payment
     initiatePayment: catchAsync(async (req: Request, res: Response) => {
         const {
-            name,
-            phone,
-            email,
-            whatsapp,
-            facebook,
-            courseId,
-            batchId,
-            couponCode,
-            senderNumber,
-            paymentMethod,
+            name, phone, email, whatsapp, facebook,
+            courseId, batchId, couponCode, senderNumber,
+            paymentMethod
         } = req.body;
 
         console.log('🚀 Payment Initiation Request:', { name, phone, courseId, batchId });
@@ -51,9 +45,7 @@ export const admissionPaymentController = {
 
         // 2. Calculate actual price
         let finalAmount = Math.round(
-            course.price -
-            (course.price * (course.discount || 0)) / 100 +
-            (course.paymentCharge || 0),
+            course.price - (course.price * (course.discount || 0)) / 100 + (course.paymentCharge || 0)
         );
 
         let discountAmount = 0;
@@ -80,11 +72,6 @@ export const admissionPaymentController = {
                             discountAmount = Math.min(discountAmount, finalAmount);
                             finalAmount = Math.max(0, finalAmount - discountAmount);
                             appliedCoupon = couponCode;
-                            console.log('✅ Coupon applied:', {
-                                couponCode,
-                                discountAmount,
-                                finalAmount,
-                            });
                         }
                     }
                 }
@@ -98,17 +85,7 @@ export const admissionPaymentController = {
             finalAmount = 10;
         }
 
-        console.log(
-            '💰 Final Amount:',
-            finalAmount,
-            'TK (Original:',
-            Math.round(
-                course.price -
-                (course.price * (course.discount || 0)) / 100 +
-                (course.paymentCharge || 0),
-            ),
-            'TK)',
-        );
+        console.log('💰 Final Amount:', finalAmount, 'TK');
 
         // 3. Generate unique transaction ID
         const tran_id = `ADM_${Date.now()}_${Math.random().toString(36).substr(2, 8)}`;
@@ -119,7 +96,7 @@ export const admissionPaymentController = {
             currency: 'BDT',
             tran_id,
 
-            // Callback URLs
+            // Callback URLs - MUST be your API server URL (SSLCommerz calls these)
             success_url: `${config.apiUrl}/admissions/payment/success`,
             fail_url: `${config.apiUrl}/admissions/payment/fail`,
             cancel_url: `${config.apiUrl}/admissions/payment/cancel`,
@@ -179,7 +156,6 @@ export const admissionPaymentController = {
 
             console.log('✅ Payment URL generated:', apiResponse.GatewayPageURL);
 
-
             res.status(200).json({
                 success: true,
                 message: 'Payment initiated',
@@ -200,7 +176,6 @@ export const admissionPaymentController = {
     paymentSuccess: catchAsync(async (req: Request, res: Response) => {
         console.log('🎉 ========== PAYMENT SUCCESS CALLBACK ==========');
         console.log('📦 Full body keys:', Object.keys(req.body));
-        console.log('📦 Content-Type:', req.headers['content-type']);
 
         const { tran_id, val_id, amount, card_type } = req.body;
 
@@ -209,7 +184,7 @@ export const admissionPaymentController = {
         const value_c = req.body.value_c || '';
         const value_d = req.body.value_d || '{}';
 
-        console.log('📋 Values:', { value_a, value_b, value_c, value_d_length: value_d.length });
+        console.log('📋 Values:', { value_a, value_b, value_c });
 
         // Parse value_d
         let extraData: any = {};
@@ -220,17 +195,12 @@ export const admissionPaymentController = {
                 console.log('✅ value_d parsed:', extraData);
             } catch (e: any) {
                 console.error('❌ JSON parse failed:', e.message);
-                console.error('❌ Raw value_d (first 200 chars):', value_d.substring(0, 200));
-
-                // Try URL decode
                 try {
                     const decoded = decodeURIComponent(value_d);
                     extraData = JSON.parse(decoded);
                     console.log('✅ Parsed after URL decode:', extraData);
                 } catch (e2: any) {
-                    console.error('❌ URL decode also failed:', e2.message);
-
-                    // Manual extraction
+                    console.error('❌ URL decode failed');
                     try {
                         const getVal = (key: string) => {
                             const match = value_d.match(new RegExp(`"${key}"\\s*:\\s*"([^"]*)"`));
@@ -251,7 +221,7 @@ export const admissionPaymentController = {
                         };
                         console.log('✅ Manually extracted:', extraData);
                     } catch (e3: any) {
-                        console.error('❌ Manual extraction failed:', e3.message);
+                        console.error('❌ Manual extraction failed');
                     }
                 }
             }
@@ -282,10 +252,6 @@ export const admissionPaymentController = {
 
         console.log('💾 Saving:', admissionData);
 
-        if (!admissionData.courseId || !admissionData.batchId) {
-            console.error('❌ MISSING courseId or batchId!');
-        }
-
         try {
             // Validate payment
             const sslcz = new SSLCommerzPayment(
@@ -300,7 +266,7 @@ export const admissionPaymentController = {
 
             if (validation.status !== 'VALID' && validation.status !== 'VALIDATED') {
                 console.error('❌ Payment invalid!');
-                return res.redirect(`${config.apiUrl}/admission-registration/fail`);
+                return res.redirect(`${process.env.FRONTEND_URL}/admission-registration/fail`);
             }
 
             // Save to database
@@ -313,7 +279,6 @@ export const admissionPaymentController = {
                     { code: extraData.couponCode.toUpperCase() },
                     { $inc: { usedCount: 1 } },
                 );
-                console.log('✅ Coupon updated');
             }
 
             // Google Sheets
@@ -321,31 +286,14 @@ export const admissionPaymentController = {
                 const { appendDataToGoogleSheet } = await import('@/utils/googleSheets');
                 const { sanitizePhoneNumber } = await import('@/utils/phoneSanitizer');
 
-                const batch = extraData?.batchId
-                    ? await CourseBatch.findById(extraData.batchId)
-                    : null;
-                const course = extraData?.courseId
-                    ? await Course.findById(extraData.courseId)
-                    : null;
+                const batch = extraData?.batchId ? await CourseBatch.findById(extraData.batchId) : null;
+                const course = extraData?.courseId ? await Course.findById(extraData.courseId) : null;
 
                 await appendDataToGoogleSheet(
                     `${batch?.name || extraData?.batchName || 'Admission'} - admission`,
-                    [
-                        'Name',
-                        'Phone',
-                        'WhatsApp',
-                        'Email',
-                        'Facebook',
-                        'Course',
-                        'Batch',
-                        'Coupon Code',
-                        'Amount',
-                        'Payment Method',
-                        'Sender Number',
-                        'Payment Status',
-                        'Transaction ID',
-                        'Registered At',
-                    ],
+                    ['Name', 'Phone', 'WhatsApp', 'Email', 'Facebook', 'Course', 'Batch',
+                        'Coupon Code', 'Amount', 'Payment Method', 'Sender Number',
+                        'Payment Status', 'Transaction ID', 'Registered At'],
                     [
                         value_a,
                         sanitizePhoneNumber(value_b) || value_b,
@@ -368,8 +316,8 @@ export const admissionPaymentController = {
                 console.error('❌ Google Sheet error:', sheetError.message);
             }
 
-            // Redirect
-            const successUrl = new URL(`${config.apiUrl}/admission-registration/success`);
+            // ✅ FIXED: Redirect to FRONTEND, not API
+            const successUrl = new URL(`${process.env.FRONTEND_URL}/admission-registration/success`);
             successUrl.searchParams.set('name', encodeURIComponent(value_a));
             successUrl.searchParams.set('amount', extraData?.originalAmount?.toString() || amount);
             successUrl.searchParams.set('paid', amount);
@@ -380,23 +328,23 @@ export const admissionPaymentController = {
 
             console.log('🔗 Redirecting to:', successUrl.toString());
             return res.redirect(successUrl.toString());
+
         } catch (error: any) {
             console.error('❌ CRITICAL ERROR:', error.message);
-            console.error('❌ Stack:', error.stack);
-            return res.redirect(`${config.apiUrl}/admission-registration/fail`);
+            return res.redirect(`${process.env.FRONTEND_URL}/admission-registration/fail`);
         }
     }),
 
-    // Payment fail callback
+    // ✅ FIXED: Redirect to FRONTEND, not API
     paymentFail: catchAsync(async (req: Request, res: Response) => {
         console.log('❌ Payment Failed:', req.body);
-        return res.redirect(`${config.apiUrl}/admission-registration/fail`);
+        return res.redirect(`${process.env.FRONTEND_URL}/admission-registration/fail`);
     }),
 
-    // Payment cancel callback
+    // ✅ FIXED: Redirect to FRONTEND, not API
     paymentCancel: catchAsync(async (req: Request, res: Response) => {
         console.log('🚫 Payment Cancelled:', req.body);
-        return res.redirect(`${config.apiUrl}/admission-registration/cancel`);
+        return res.redirect(`${process.env.FRONTEND_URL}/admission-registration/cancel`);
     }),
 
     // IPN (Instant Payment Notification)
