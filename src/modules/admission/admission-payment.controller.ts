@@ -13,6 +13,16 @@ const FRONTEND_URL = 'https://craftskillsbd.com';
 
 export const admissionPaymentController = {
     initiatePayment: async (req: Request, res: Response) => {
+        const { agreedToTerms, ...rest } = req.body;
+
+        if (!agreedToTerms) {
+            return res.status(400).json({
+                success: false,
+                message:
+                    'You must agree to the Terms & Conditions, Privacy Policy, and Refund Policy',
+            });
+        }
+
         try {
             const {
                 name,
@@ -99,6 +109,9 @@ export const admissionPaymentController = {
                     registeredAt: new Date(),
                     createdAt: new Date(),
                     updatedAt: new Date(),
+                    agreedToTerms: true,
+                    agreedToTermsAt: new Date(),
+                    termsVersion: '1.0',
                 });
                 console.log('✅ Pending admission saved:', tran_id);
             } catch (saveError: any) {

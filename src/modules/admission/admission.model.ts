@@ -22,6 +22,9 @@ export interface IAdmission extends Document {
     notes?: string;
     registeredAt: Date;
     updatedAt: Date;
+    agreedToTerms: boolean;
+    agreedToTermsAt: Date;
+    termsVersion?: string;
 }
 
 const AdmissionSchema = new Schema<IAdmission>(
@@ -121,6 +124,19 @@ const AdmissionSchema = new Schema<IAdmission>(
             type: Date,
             default: Date.now,
         },
+        agreedToTerms: {
+            type: Boolean,
+            required: [true, 'Terms agreement is required'],
+            default: false,
+        },
+        agreedToTermsAt: {
+            type: Date,
+            default: Date.now,
+        },
+        termsVersion: {
+            type: String,
+            default: '1.0',
+        },
     },
     {
         timestamps: true,
@@ -135,5 +151,6 @@ AdmissionSchema.index({ paymentStatus: 1 });
 AdmissionSchema.index({ result: 1 });
 AdmissionSchema.index({ registeredAt: -1 });
 AdmissionSchema.index({ name: 'text', email: 'text', phone: 'text' });
+AdmissionSchema.index({ agreedToTerms: 1 });
 
 export const Admission = models.Admission || model<IAdmission>('Admission', AdmissionSchema);
