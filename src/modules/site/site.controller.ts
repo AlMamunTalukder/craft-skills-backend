@@ -24,31 +24,25 @@ const updateSiteData = catchAsync(async (req, res) => {
     });
 });
 
-const updatePdfSettings = catchAsync(async (req, res) => {
-    const { showPdfMenu } = req.body;
-
-    // Get current site data (could be from cache or DB)
+const updateMenuSettings = catchAsync(async (req, res) => {
+    const menuSettings = req.body;
     let siteData = await siteService.getSiteData();
-
     if (!siteData) {
         throw new Error('Site data not found');
     }
-
-    // Safely convert to plain object (works for both Mongoose doc and cached plain object)
     const siteDataPlain = siteData.toObject ? siteData.toObject() : siteData;
-
-    // Update only the PDF settings
     const updatedData = {
         ...siteDataPlain,
-        showPdfMenu,
+        menuSettings: {
+            ...siteDataPlain.menuSettings,
+            ...menuSettings,
+        },
     };
-
     const result = await siteService.updateSiteData(updatedData);
-
     sendResponse(res, {
         statusCode: 200,
         success: true,
-        message: 'PDF settings updated successfully',
+        message: 'Menu settings updated successfully',
         data: result,
     });
 });
@@ -56,5 +50,5 @@ const updatePdfSettings = catchAsync(async (req, res) => {
 export const siteController = {
     updateSiteData,
     getSiteData,
-    updatePdfSettings,
+    updateMenuSettings,
 };

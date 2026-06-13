@@ -1,5 +1,12 @@
 import { z } from 'zod';
 
+export const menuSettingsDto = z.object({
+    admission: z.boolean().optional(),
+    review: z.boolean().optional(),
+    exclusive: z.boolean().optional(),
+    gift: z.boolean().optional(),
+});
+
 export const siteDto = z.object({
     name: z.string(),
     logoHeader: z.string(),
@@ -43,7 +50,7 @@ export const siteDto = z.object({
     totalCourses: z.number().optional(),
     totalBatches: z.number().optional(),
     successRate: z.number().optional(),
-    showPdfMenu: z.boolean().optional(),
+    menuSettings: menuSettingsDto.optional(),
 });
 
 export type SiteDto = z.infer<typeof siteDto>;

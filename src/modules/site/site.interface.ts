@@ -6,9 +6,6 @@ export interface ISite extends Document {
     name: string;
     logoHeader: string;
     logoFooter: string;
-    // ADD THESE:
-    // logoLight: string;
-    // logoDark: string;
     tagline: string;
     address: string;
     phone1: string;
@@ -45,5 +42,11 @@ export interface ISite extends Document {
     admissionHeaderTitle?: string;
     admissionHeaderDescription?: string;
     admissionDeadline?: Date;
-    showPdfMenu?: boolean;
+
+    menuSettings?: {
+        admission: boolean;
+        review: boolean;
+        exclusive: boolean;
+        gift: boolean;
+    };
 }
