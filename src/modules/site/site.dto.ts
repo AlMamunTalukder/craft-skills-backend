@@ -11,8 +11,6 @@ export const siteDto = z.object({
     name: z.string(),
     logoHeader: z.string(),
     logoFooter: z.string(),
-    // logoLight: z.string(),
-    // logoDark: z.string(),
     tagline: z.string(),
     address: z.string(),
     phone1: z.string(),

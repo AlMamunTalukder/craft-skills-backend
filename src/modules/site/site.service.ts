@@ -21,13 +21,11 @@ const getSiteData = async (): Promise<ISite | null> => {
     return siteData;
 };
 
-// In your site.service.ts - updateSiteData function
 const updateSiteData = async (data: SiteDto): Promise<ISite | null> => {
     const updatedSite = await Site.findOneAndUpdate({}, data, { new: true });
 
-    // console.log('Updated site:', updatedSite);
-
     if (updatedSite) {
+        // ✅ Update cache with new data
         await redisClient.set(CACHE_KEY, JSON.stringify(updatedSite));
         logger.info('Site data updated in MongoDB & cache');
     }
@@ -35,9 +33,16 @@ const updateSiteData = async (data: SiteDto): Promise<ISite | null> => {
     return updatedSite;
 };
 
+// ✅ Add a function to clear cache
+const clearCache = async (): Promise<void> => {
+    await redisClient.del(CACHE_KEY);
+    logger.info('Site cache cleared');
+};
+
 const siteService = {
     updateSiteData,
     getSiteData,
+    clearCache,
 };
 
 export default siteService;

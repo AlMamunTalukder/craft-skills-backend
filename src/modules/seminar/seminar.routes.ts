@@ -20,7 +20,7 @@ router.post(
 // GET routes – specific ones BEFORE dynamic
 router.get('/', seminarController.getAllSeminars);
 router.get('/active', seminarController.getActiveSeminar);
-router.get('/pdf-seminar', seminarController.getPdfSeminar); // ✅ MOVED HERE (before /:id)
+router.get('/pdf-seminar', seminarController.getPdfSeminar);
 
 // Dynamic routes (must be LAST)
 router.get('/:id', seminarController.getSeminarById);
