@@ -34,10 +34,11 @@ app.use((0, cors_1.default)({
     origin: [
         'http://localhost:3000',
         'http://localhost:5173',
-        'https://client.craftskillsbd.com',
+        'http://localhost:5000',
         'https://craftskillsbd.com',
         'https://www.craftskillsbd.com',
         'https://admin.craftskillsbd.com',
+        'https://server.craftskillsbd.com',
     ],
     credentials: true,
     methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
