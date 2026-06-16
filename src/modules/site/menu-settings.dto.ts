@@ -1,3 +1,4 @@
+// menu-settings.dto.ts
 import { z } from 'zod';
 
 export const menuSettingsDto = z.object({

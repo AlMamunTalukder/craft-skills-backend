@@ -1,7 +1,6 @@
 import catchAsync from 'src/utils/catchAsync';
 import siteService from './site.service';
 import sendResponse from 'src/utils/sendResponse';
-import redisClient from 'src/config/redis';
 
 const getSiteData = catchAsync(async (req, res) => {
     const result = await siteService.getSiteData();
@@ -27,13 +26,18 @@ const updateSiteData = catchAsync(async (req, res) => {
 
 const updateMenuSettings = catchAsync(async (req, res) => {
     const menuSettings = req.body;
+
+    // Get current site data
     let siteData = await siteService.getSiteData();
 
     if (!siteData) {
         throw new Error('Site data not found');
     }
 
+    // Convert to plain object if needed
     const siteDataPlain = siteData.toObject ? siteData.toObject() : siteData;
+
+    // Update only menu settings
     const updatedData = {
         ...siteDataPlain,
         menuSettings: {
@@ -43,9 +47,6 @@ const updateMenuSettings = catchAsync(async (req, res) => {
     };
 
     const result = await siteService.updateSiteData(updatedData);
-
-    // ✅ Invalidate Redis cache
-    await redisClient.del('site_data');
 
     sendResponse(res, {
         statusCode: 200,
