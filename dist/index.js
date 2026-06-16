@@ -18,6 +18,7 @@ const passport_1 = __importDefault(require("passport"));
 const notFound_1 = __importDefault(require("./routes/notFound"));
 const connect_mongo_1 = __importDefault(require("connect-mongo"));
 const redis_1 = require("./config/redis");
+const cookie_parser_1 = __importDefault(require("cookie-parser"));
 require("./workers/participant.worker");
 require("./workers/admission.worker");
 require("./workers/seminar-confirmation.worker");
@@ -27,6 +28,7 @@ const app = (0, express_1.default)();
 if (index_2.default.env === 'production') {
     app.set('trust proxy', 1);
 }
+app.use((0, cookie_parser_1.default)());
 app.use((0, morgan_1.default)('dev'));
 app.use((0, cors_1.default)({
     origin: [

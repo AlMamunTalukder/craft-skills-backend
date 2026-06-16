@@ -14,6 +14,7 @@ import passport from 'passport';
 import notFound from '@/routes/notFound';
 import MongoStore from 'connect-mongo';
 import { connectRedis } from '@/config/redis';
+import cookieParser from 'cookie-parser';
 import '@/workers/participant.worker';
 import '@/workers/admission.worker';
 import '@/workers/seminar-confirmation.worker';
@@ -27,6 +28,7 @@ if (config.env === 'production') {
     app.set('trust proxy', 1);
 }
 
+app.use(cookieParser());
 app.use(morgan('dev'));
 
 app.use(

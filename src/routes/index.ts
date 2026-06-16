@@ -15,7 +15,7 @@ import { studentAttendanceRoutes } from 'src/modules/studentAttendance/studentAt
 import { SeminarConfirmationRoutes } from 'src/modules/seminar-confirmation/seminar-confirmation.routes';
 import { reviewRoutes } from 'src/modules/review/review.routes';
 import { ExclusiveOfferRoutes } from 'src/modules/exclusive/exclusive-offer.routes';
-import { ExclusiveBatchRoutes } from 'src/modules/exclusive/exclusive-batch.routes';
+import { ExclusiveVisitorRoutes } from 'src/modules/exclusive/exclusive-visitor.routes';
 
 const router = Router();
 
@@ -70,12 +70,12 @@ const moduleRoutes = [
         route: AdmissionRoutes,
     },
     {
-        path: '/exclusive-offer',
-        route: ExclusiveOfferRoutes,
+        path: '/exclusive',
+        route: ExclusiveVisitorRoutes,
     },
     {
-        path: '/exclusive-batches',
-        route: ExclusiveBatchRoutes,
+        path: '/exclusive-offer',
+        route: ExclusiveOfferRoutes,
     },
 
     {

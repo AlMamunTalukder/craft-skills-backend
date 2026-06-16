@@ -1,13 +1,6 @@
-// ============================================
-// server/modules/exclusive-offer/exclusive-offer.routes.ts
-// ============================================
-
 import { Router } from 'express';
-
 import validateRequest from 'src/utils/validateRequest';
-
 import { exclusiveOfferController } from './exclusive-offer.controller';
-
 import { registerExclusiveOfferDto } from './exclusive-offer.dto';
 
 const router = Router();
@@ -18,18 +11,11 @@ router.post(
     exclusiveOfferController.register,
 );
 
-router.post('/payment/success', exclusiveOfferController.paymentSuccess);
+router.post('/payment-success', exclusiveOfferController.paymentSuccess);
+router.post('/payment-fail', exclusiveOfferController.paymentFail);
+router.post('/payment-cancel', exclusiveOfferController.paymentCancel);
+router.post('/ipn', exclusiveOfferController.ipn);
 
-router.post('/payment/fail', exclusiveOfferController.paymentFail);
-
-router.post('/payment/cancel', exclusiveOfferController.paymentCancel);
-
-router.get('/admin/exclusive-offer/participants', exclusiveOfferController.getParticipants);
-
-router.get(
-    '/admin/exclusive-offer/participants',
-
-    exclusiveOfferController.getParticipants,
-);
+router.get('/admin/participants', exclusiveOfferController.getParticipants);
 
 export const ExclusiveOfferRoutes = router;
