@@ -8,10 +8,12 @@ const ExclusiveOfferParticipantSchema = new Schema<IExclusiveOfferParticipant>(
         phone: { type: String, required: true, trim: true },
         whatsapp: { type: String, trim: true },
         occupation: { type: String, trim: true },
+        price: { type: Number, default: 199 },
         paymentStatus: { type: String, enum: ['pending', 'success', 'failed'], default: 'pending' },
         paymentMethod: { type: String, default: 'sslcommerz' },
         transactionId: { type: String, unique: true },
         sslValidationId: { type: String },
+        addedByAdmin: { type: Boolean, default: false },
     },
     { timestamps: true, collection: 'exclusive_offer_participants' },
 );

@@ -4,10 +4,16 @@ import config from 'src/config';
 import { sanitizePhoneNumber } from 'src/utils/phoneSanitizer';
 import { ExclusiveVisitor } from './exclusive-visitor.model';
 import { ExclusiveOfferParticipant } from './exclusive-offer.model';
+import { ExclusiveOfferSettings } from './exclusive-offer-settings.model';
+import { appendDataToGoogleSheet } from 'src/utils/googleSheets';
 
 const registerParticipant = async (payload: any) => {
     try {
-        // 1. Check if visitor is blocked
+        // 1. Get price from settings
+        const settings = await ExclusiveOfferSettings.findOne();
+        const price = settings?.price || 199;
+
+        // 2. Check if visitor is blocked
         if (payload.visitorId) {
             const visitor = await ExclusiveVisitor.findOne({ visitorId: payload.visitorId });
             if (visitor?.isBlocked) {
@@ -15,30 +21,31 @@ const registerParticipant = async (payload: any) => {
             }
         }
 
-        // 2. Sanitize phone
+        // 3. Sanitize phone
         const cleanPhone = sanitizePhoneNumber(payload.phone) || payload.phone;
         const cleanWhatsapp = payload.whatsapp
             ? sanitizePhoneNumber(payload.whatsapp) || payload.whatsapp
             : '';
 
-        // 3. Generate transaction ID
+        // 4. Generate transaction ID
         const tran_id = `EXCL_${Date.now()}_${Math.random().toString(36).substr(2, 8)}`;
 
-        // 4. Create participant record (pending)
+        // 5. Create participant record (pending)
         const participant = await ExclusiveOfferParticipant.create({
             name: payload.name,
             email: payload.email || '',
             phone: cleanPhone,
             whatsapp: cleanWhatsapp,
             occupation: payload.occupation || '',
+            price: price,
             transactionId: tran_id,
             paymentStatus: 'pending',
             paymentMethod: 'sslcommerz',
         });
 
-        // 5. Prepare SSLCommerz data
+        // 6. Prepare SSLCommerz data
         const sslData = {
-            total_amount: 199,
+            total_amount: price,
             currency: 'BDT',
             tran_id,
             success_url: `${config.apiUrl}/exclusive-offer/payment-success`,
@@ -53,6 +60,7 @@ const registerParticipant = async (payload: any) => {
                 whatsapp: cleanWhatsapp,
                 occupation: payload.occupation || '',
                 visitorId: payload.visitorId,
+                price: price,
             }),
             shipping_method: 'NO',
             product_name: 'Voice & Public Speaking Masterclass',
@@ -70,7 +78,7 @@ const registerParticipant = async (payload: any) => {
             ship_country: 'Bangladesh',
         };
 
-        // 6. Initialize SSLCommerz
+        // 7. Initialize SSLCommerz
         const sslcz = new SSLCommerzPayment(
             process.env.STORE_ID as string,
             process.env.STORE_PASS as string,
@@ -80,7 +88,6 @@ const registerParticipant = async (payload: any) => {
         const apiResponse = await sslcz.init(sslData);
 
         if (!apiResponse || !apiResponse.GatewayPageURL) {
-            // Delete pending participant if SSL fails
             await ExclusiveOfferParticipant.findByIdAndDelete(participant._id);
             throw new AppError(500, 'SSLCommerz initialization failed');
         }
@@ -94,6 +101,40 @@ const registerParticipant = async (payload: any) => {
     }
 };
 
+// ✅ Send to Google Sheets
+const sendToGoogleSheets = async (participant: any) => {
+    const registrationDate = new Date().toLocaleString('en-BD', {
+        timeZone: 'Asia/Dhaka',
+    });
+
+    await appendDataToGoogleSheet(
+        'Exclusive Offer Students',
+        [
+            'Name',
+            'Phone',
+            'WhatsApp',
+            'Email',
+            'Occupation',
+            'Price',
+            'Payment Status',
+            'Added By',
+            'Registered At',
+        ],
+        [
+            participant.name || '',
+            participant.phone || '',
+            participant.whatsapp || '',
+            participant.email || '',
+            participant.occupation || '',
+            String(participant.price || 199),
+            participant.paymentStatus || 'success',
+            participant.addedByAdmin ? 'Admin' : 'Student',
+            registrationDate,
+        ],
+    );
+};
+
 export const exclusiveOfferService = {
     registerParticipant,
+    sendToGoogleSheets,
 };
