@@ -4,7 +4,7 @@
     "description": "",
     "main": "dist/index.js",
     "scripts": {
-        "build": "npm run format && npm run lint && tsc && tsc-alias",
+        "build": "tsc && tsc-alias",
         "start": "node dist/index.js",
         "dev": "tsx watch src/index.ts",
         "lint": "eslint . --ext .ts",

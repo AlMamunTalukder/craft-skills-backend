@@ -14,11 +14,13 @@ const ExclusiveOfferParticipantSchema = new Schema<IExclusiveOfferParticipant>(
         transactionId: { type: String, unique: true },
         sslValidationId: { type: String },
         addedByAdmin: { type: Boolean, default: false },
+        visitorId: { type: String }, // ✅ ADD THIS
     },
     { timestamps: true, collection: 'exclusive_offer_participants' },
 );
 
 ExclusiveOfferParticipantSchema.index({ createdAt: -1 });
+ExclusiveOfferParticipantSchema.index({ transactionId: 1 });
 
 export const ExclusiveOfferParticipant =
     models.ExclusiveOfferParticipant ||

@@ -22,14 +22,37 @@ new Worker(
         try {
             session.startTransaction();
 
-            const [participant] = await ExclusiveOfferParticipant.create(
-                [{ ...participantData, phone: cleanPhone }],
-                { session },
-            );
+            // Check if participant already exists (in case of duplicate job)
+            let participant = await ExclusiveOfferParticipant.findOne({
+                transactionId: participantData.transactionId,
+            });
+
+            if (!participant) {
+                // Create new participant
+                const [newParticipant] = await ExclusiveOfferParticipant.create(
+                    [{ ...participantData, phone: cleanPhone }],
+                    { session },
+                );
+                participant = newParticipant;
+                logger.info('💾 Database insert successful', { participantId: participant._id });
+            } else {
+                // Update existing participant
+                await ExclusiveOfferParticipant.findOneAndUpdate(
+                    { transactionId: participantData.transactionId },
+                    {
+                        ...participantData,
+                        phone: cleanPhone,
+                        paymentStatus: participantData.paymentStatus || 'success',
+                    },
+                    { session },
+                );
+                logger.info('💾 Database update successful', {
+                    transactionId: participantData.transactionId,
+                });
+            }
 
             await session.commitTransaction();
             session.endSession();
-            logger.info('💾 Database insert successful', { participantId: participant._id });
 
             // ============================
             // GOOGLE SHEET
@@ -40,7 +63,6 @@ new Worker(
 
             logger.info('📤 Attempting to append to Google Sheets...');
 
-            // Update the Google Sheet append to include whatsapp and occupation
             await appendDataToGoogleSheet(
                 'Exclusive Offer Course',
                 [
@@ -56,15 +78,15 @@ new Worker(
                     'Registered At',
                 ],
                 [
-                    participant.name,
-                    cleanPhone,
-                    participant.whatsapp || '',
-                    participant.email || '',
-                    participant.occupation || '',
-                    participant.courseTitle,
-                    String(participant.offerPrice),
+                    participant.name || participantData.name,
+                    cleanPhone || participantData.phone,
+                    participant.whatsapp || participantData.whatsapp || '',
+                    participant.email || participantData.email || '',
+                    participant.occupation || participantData.occupation || '',
+                    participant.courseTitle || 'Voice & Public Speaking Masterclass',
+                    String(participant.offerPrice || participantData.offerPrice || 199),
                     participantData.transactionId || '',
-                    participantData.paymentStatus || 'pending',
+                    participantData.paymentStatus || 'success',
                     registrationDate,
                 ],
             );

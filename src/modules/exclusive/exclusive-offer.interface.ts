@@ -12,6 +12,7 @@ export interface IExclusiveOfferParticipant extends Document {
     transactionId?: string;
     sslValidationId?: string;
     addedByAdmin?: boolean;
+    visitorId?: string; // ✅ ADD THIS
     createdAt: Date;
     updatedAt: Date;
 }
