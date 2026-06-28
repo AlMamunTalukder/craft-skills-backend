@@ -1,6 +1,6 @@
 node_modules
 logs
-.env
 dist
 build
 coverage
+config.bat
