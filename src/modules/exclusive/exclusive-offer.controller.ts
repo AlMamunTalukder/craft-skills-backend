@@ -388,28 +388,28 @@ const deleteParticipant = catchAsync(async (req, res) => {
     });
 });
 
-// ✅ Get Price Setting
+// ✅ Get Price Setting (now returns all settings fields)
 const getPrice = catchAsync(async (req, res) => {
     const settings = await ExclusiveOfferSettings.findOne();
     sendResponse(res, {
         success: true,
         statusCode: 200,
-        data: settings || { price: 199 },
+        data: settings || { price: 199, date: '', whatsappLink: '', fbLink: '' },
     });
 });
 
-// ✅ Update Price Setting
+// ✅ Update Price Setting (now accepts all settings fields)
 const updatePrice = catchAsync(async (req, res) => {
-    const { price } = req.body;
+    const { price, date, whatsappLink, fbLink } = req.body;
     const settings = await ExclusiveOfferSettings.findOneAndUpdate(
         {},
-        { price },
+        { price, date, whatsappLink, fbLink },
         { upsert: true, new: true },
     );
     sendResponse(res, {
         success: true,
         statusCode: 200,
-        message: 'Price updated successfully',
+        message: 'Settings updated successfully',
         data: settings,
     });
 });
