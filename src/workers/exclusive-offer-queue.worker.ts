@@ -18,41 +18,34 @@ new Worker(
 
         const cleanPhone = sanitizePhoneNumber(participantData.phone) || participantData.phone;
 
+        // ✅ Use findOneAndUpdate with upsert to avoid duplicate key errors
         const session = await mongoose.startSession();
         try {
             session.startTransaction();
 
-            // Check if participant already exists (in case of duplicate job)
-            let participant = await ExclusiveOfferParticipant.findOne({
-                transactionId: participantData.transactionId,
-            });
+            // Build the update object
+            const updateData = {
+                ...participantData,
+                phone: cleanPhone,
+                paymentStatus: participantData.paymentStatus || 'success',
+            };
 
-            if (!participant) {
-                // Create new participant
-                const [newParticipant] = await ExclusiveOfferParticipant.create(
-                    [{ ...participantData, phone: cleanPhone }],
-                    { session },
-                );
-                participant = newParticipant;
-                logger.info('💾 Database insert successful', { participantId: participant._id });
-            } else {
-                // Update existing participant
-                await ExclusiveOfferParticipant.findOneAndUpdate(
-                    { transactionId: participantData.transactionId },
-                    {
-                        ...participantData,
-                        phone: cleanPhone,
-                        paymentStatus: participantData.paymentStatus || 'success',
-                    },
-                    { session },
-                );
-                logger.info('💾 Database update successful', {
-                    transactionId: participantData.transactionId,
-                });
-            }
+            // Upsert: if document exists, update; else create
+            const participant = await ExclusiveOfferParticipant.findOneAndUpdate(
+                { transactionId: participantData.transactionId },
+                { $set: updateData },
+                {
+                    new: true,
+                    upsert: true,
+                    session,
+                    setDefaultsOnInsert: true,
+                },
+            );
 
             await session.commitTransaction();
             session.endSession();
+
+            logger.info('💾 Participant saved/updated', { participantId: participant._id });
 
             // ============================
             // GOOGLE SHEET
@@ -79,12 +72,12 @@ new Worker(
                 ],
                 [
                     participant.name || participantData.name,
-                    cleanPhone || participantData.phone,
+                    participant.phone || cleanPhone,
                     participant.whatsapp || participantData.whatsapp || '',
                     participant.email || participantData.email || '',
                     participant.occupation || participantData.occupation || '',
                     participant.courseTitle || 'Voice & Public Speaking Masterclass',
-                    String((participant as any).price || participantData.offerPrice || 199),
+                    String(participant.offerPrice || participantData.offerPrice || 199),
                     participantData.transactionId || '',
                     participantData.paymentStatus || 'success',
                     registrationDate,
