@@ -199,36 +199,100 @@ const ipn = async (req: any, res: any) => {
     const { tran_id, status, val_id } = req.body;
     console.log('📨 IPN received:', { tran_id, status, val_id });
 
-    // ✅ Always respond 200 to IPN first
-    res.sendStatus(200);
+    res.sendStatus(200); // ✅ Always respond 200 immediately
 
-    if (tran_id && val_id) {
-        try {
-            // ✅ Validate with SSLCommerz
-            const SSLCommerzPayment = require('sslcommerz-lts');
-            const sslcz = new SSLCommerzPayment(process.env.STORE_ID, process.env.STORE_PASS, true);
+    if (!tran_id) return;
 
-            const validation = await sslcz.validate({ val_id });
-            console.log('📨 IPN validation:', validation?.status);
+    try {
+        const isSuccess = status === 'VALID' || status === 'VALIDATED';
 
-            if (validation?.status === 'VALID' || validation?.status === 'VALIDATED') {
-                await ExclusiveOfferParticipant.findOneAndUpdate(
-                    { transactionId: tran_id },
-                    {
-                        $set: {
-                            paymentStatus: 'success',
-                            sslValidationId: val_id,
-                            updatedAt: new Date(),
-                        },
-                    },
-                );
-                console.log('✅ IPN: DB updated for', tran_id);
-            }
-        } catch (e: any) {
-            console.error('❌ IPN error:', e.message);
+        const participant = await ExclusiveOfferParticipant.findOneAndUpdate(
+            { transactionId: tran_id },
+            {
+                $set: {
+                    paymentStatus: isSuccess ? 'success' : 'failed',
+                    sslValidationId: val_id || '',
+                    updatedAt: new Date(),
+                },
+            },
+            { new: true },
+        );
+
+        if (!participant || !isSuccess) return;
+
+        console.log('✅ IPN: DB updated for', tran_id);
+
+        // Update visitor
+        if (participant.visitorId) {
+            await ExclusiveVisitor.findOneAndUpdate(
+                { visitorId: participant.visitorId },
+                { registered: true, isBlocked: false },
+                { upsert: true },
+            ).catch((e: any) => console.error('Visitor update error:', e.message));
         }
+
+        // Queue Google Sheets
+        await exclusiveOfferService
+            .addToQueue({
+                name: participant.name,
+                phone: participant.phone,
+                whatsapp: participant.whatsapp || '',
+                email: participant.email || '',
+                occupation: participant.occupation || '',
+                courseTitle: 'Voice & Public Speaking Masterclass',
+                offerPrice: (participant as any).price || 199,
+                transactionId: tran_id,
+                paymentStatus: 'success',
+            })
+            .catch((e: any) => console.error('Queue error:', e.message));
+
+        console.log('✅ IPN fully processed for', tran_id);
+    } catch (e: any) {
+        console.error('❌ IPN error:', e.message);
     }
 };
+
+// ✅ NEW - called by frontend callback page to get participant data
+const verifyPayment = catchAsync(async (req, res) => {
+    const { tran_id } = req.query as { tran_id: string };
+
+    if (!tran_id) {
+        return sendResponse(res, {
+            success: false,
+            statusCode: 400,
+            message: 'tran_id required',
+            data: null,
+        });
+    }
+
+    // Wait up to 10s for IPN to process (IPN may arrive slightly before/after user)
+    let participant = null;
+    for (let i = 0; i < 5; i++) {
+        participant = await ExclusiveOfferParticipant.findOne({ transactionId: tran_id });
+        if (participant?.paymentStatus === 'success') break;
+        await new Promise((r) => setTimeout(r, 2000)); // wait 2s between retries
+    }
+
+    if (!participant) {
+        return sendResponse(res, {
+            success: false,
+            statusCode: 404,
+            message: 'Transaction not found',
+            data: null,
+        });
+    }
+
+    if (participant.paymentStatus !== 'success') {
+        return sendResponse(res, {
+            success: false,
+            statusCode: 400,
+            message: 'Payment not completed',
+            data: null,
+        });
+    }
+
+    sendResponse(res, { success: true, statusCode: 200, data: participant });
+});
 
 // ✅ GET all participants
 const getParticipants = catchAsync(async (req, res) => {
@@ -356,6 +420,7 @@ export const exclusiveOfferController = {
     paymentFail,
     paymentCancel,
     ipn,
+    verifyPayment,
     getParticipants,
     getParticipantById,
     createParticipant,

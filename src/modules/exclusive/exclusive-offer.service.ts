@@ -8,7 +8,7 @@ import { ExclusiveOfferSettings } from './exclusive-offer-settings.model';
 import { appendDataToGoogleSheet } from 'src/utils/googleSheets';
 import { exclusiveOfferQueue } from 'src/queues/exclusiveOffer.queue';
 
-// const FRONTEND_URL = 'https://craftskillsbd.com';
+const FRONTEND_URL = 'https://craftskillsbd.com';
 
 const registerParticipant = async (payload: any) => {
     try {
@@ -52,10 +52,18 @@ const registerParticipant = async (payload: any) => {
             total_amount: price,
             currency: 'BDT',
             tran_id,
-            success_url: `${config.apiUrl}/exclusive-offer/payment-success`,
-            fail_url: `${config.apiUrl}/exclusive-offer/payment-fail`,
-            cancel_url: `${config.apiUrl}/exclusive-offer/payment-cancel`,
+
+            success_url: `${FRONTEND_URL}/exclusive/payment-callback?tran_id=${tran_id}&status=success`,
+            fail_url: `${FRONTEND_URL}/exclusive/payment-callback?tran_id=${tran_id}&status=fail`,
+            cancel_url: `${FRONTEND_URL}/exclusive/payment-callback?tran_id=${tran_id}&status=cancel`,
+            // ipn_url stays pointing to backend - this is correct
             ipn_url: `${config.apiUrl}/exclusive-offer/ipn`,
+
+            // success_url: `${config.apiUrl}/exclusive-offer/payment-success`,
+            // fail_url: `${config.apiUrl}/exclusive-offer/payment-fail`,
+            // cancel_url: `${config.apiUrl}/exclusive-offer/payment-cancel`,
+            // ipn_url: `${config.apiUrl}/exclusive-offer/ipn`,
+
             value_a: tran_id, // ✅ FIX: Use tran_id like admission
             value_b: cleanPhone,
             value_c: payload.email || '',

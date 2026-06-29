@@ -16,6 +16,7 @@ router.post('/payment-success', exclusiveOfferController.paymentSuccess);
 router.post('/payment-fail', exclusiveOfferController.paymentFail);
 router.post('/payment-cancel', exclusiveOfferController.paymentCancel);
 router.post('/ipn', exclusiveOfferController.ipn);
+router.get('/verify-payment', exclusiveOfferController.verifyPayment);
 
 // ✅ Admin routes - Participants CRUD
 // Note: These are mounted at /api/v1/exclusive-offer/participants
