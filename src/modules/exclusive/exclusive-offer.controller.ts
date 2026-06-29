@@ -27,13 +27,45 @@ const paymentSuccess = async (req: any, res: any) => {
         const lookupTranId = req.body.value_a || tran_id;
 
         console.log('📋 lookupTranId:', lookupTranId);
+        console.log('📋 val_id:', val_id);
 
-        if (!lookupTranId) {
-            console.error('❌ No transaction ID found in callback');
+        if (!lookupTranId || !val_id) {
+            console.error('❌ Missing tran_id or val_id');
             return res.redirect(`${FRONTEND_URL}/exclusive/fail`);
         }
 
-        // ✅ Find participant
+        // ✅ STEP 1: Validate the transaction with SSLCommerz
+        console.log('🔍 Validating transaction with SSLCommerz...');
+        const SSLCommerzPayment = require('sslcommerz-lts');
+        const sslcz = new SSLCommerzPayment(
+            process.env.STORE_ID,
+            process.env.STORE_PASS,
+            true, // live mode
+        );
+
+        let validationResponse: any = null;
+        try {
+            validationResponse = await sslcz.validate({ val_id });
+            console.log('✅ SSLCommerz validation response:', JSON.stringify(validationResponse));
+        } catch (validationError: any) {
+            console.error('❌ SSLCommerz validation API error:', validationError.message);
+            // Continue anyway — DB update still happened, don't block user
+        }
+
+        // ✅ STEP 2: Check validation status
+        const isValid =
+            !validationResponse || // if validation API failed, trust the callback
+            validationResponse.status === 'VALID' ||
+            validationResponse.status === 'VALIDATED';
+
+        if (!isValid) {
+            console.error('❌ Transaction not valid:', validationResponse?.status);
+            return res.redirect(`${FRONTEND_URL}/exclusive/fail`);
+        }
+
+        console.log('✅ Transaction validated successfully');
+
+        // ✅ STEP 3: Find participant
         let participant = await ExclusiveOfferParticipant.findOne({
             transactionId: lookupTranId,
         });
@@ -45,7 +77,7 @@ const paymentSuccess = async (req: any, res: any) => {
 
         console.log('✅ Found participant:', participant._id);
 
-        // ✅ Parse extra data - isolated try/catch
+        // ✅ STEP 4: Parse extra data
         let extraData: any = {};
         try {
             if (req.body.value_d) {
@@ -61,7 +93,7 @@ const paymentSuccess = async (req: any, res: any) => {
             console.warn('⚠️ Could not parse value_d, continuing anyway');
         }
 
-        // ✅ Update payment status - isolated try/catch
+        // ✅ STEP 5: Update DB - isolated, never fatal
         try {
             await ExclusiveOfferParticipant.findOneAndUpdate(
                 { transactionId: lookupTranId },
@@ -81,19 +113,20 @@ const paymentSuccess = async (req: any, res: any) => {
             console.log('✅ DB updated successfully');
         } catch (dbError) {
             console.error('❌ DB update error (non-fatal):', dbError);
-            // Continue - participant was found so we can still redirect to success
         }
 
-        // ✅ Fetch updated record - isolated try/catch
+        // ✅ STEP 6: Fetch updated record
         let updatedParticipant = participant;
         try {
-            const fresh = await ExclusiveOfferParticipant.findOne({ transactionId: lookupTranId });
+            const fresh = await ExclusiveOfferParticipant.findOne({
+                transactionId: lookupTranId,
+            });
             if (fresh) updatedParticipant = fresh;
         } catch (e) {
             console.warn('⚠️ Could not fetch updated record, using original');
         }
 
-        // ✅ Update visitor - isolated try/catch, NEVER fatal
+        // ✅ STEP 7: Update visitor - never fatal
         try {
             const visitorId = extraData?.visitorId || participant.visitorId;
             if (visitorId) {
@@ -108,7 +141,7 @@ const paymentSuccess = async (req: any, res: any) => {
             console.error('❌ Visitor update error (non-fatal):', visitorError);
         }
 
-        // ✅ Queue for Google Sheets - isolated try/catch, NEVER fatal
+        // ✅ STEP 8: Queue for Google Sheets - never fatal
         try {
             await exclusiveOfferService.addToQueue({
                 name: updatedParticipant.name,
@@ -117,7 +150,7 @@ const paymentSuccess = async (req: any, res: any) => {
                 email: updatedParticipant.email || '',
                 occupation: updatedParticipant.occupation || '',
                 courseTitle: 'Voice & Public Speaking Masterclass',
-                offerPrice: updatedParticipant.price || 199,
+                offerPrice: (updatedParticipant as any).price || 199,
                 transactionId: lookupTranId,
                 paymentStatus: 'success',
             });
@@ -126,16 +159,16 @@ const paymentSuccess = async (req: any, res: any) => {
             console.error('❌ Queue error (non-fatal):', queueError);
         }
 
-        // ✅ ALWAYS redirect to success if we got this far
+        // ✅ STEP 9: Always redirect to success
         const params = new URLSearchParams({
             name: updatedParticipant.name || '',
-            amount: String(updatedParticipant.price || amount || 199),
+            amount: String((updatedParticipant as any).price || amount || 199),
             phone: updatedParticipant.phone || '',
             email: updatedParticipant.email || '',
             tran_id: lookupTranId,
         });
 
-        console.log('✅ Redirecting to success');
+        console.log('✅ Redirecting to success page');
         return res.redirect(`${FRONTEND_URL}/exclusive/success?${params.toString()}`);
     } catch (error: any) {
         console.error('❌ FATAL ERROR in paymentSuccess:', error.message);
@@ -163,15 +196,38 @@ const paymentCancel = catchAsync(async (req, res) => {
 });
 
 const ipn = async (req: any, res: any) => {
-    const { tran_id, status } = req.body;
-    console.log('📨 IPN received:', { tran_id, status });
-    if (tran_id) {
-        await ExclusiveOfferParticipant.findOneAndUpdate(
-            { transactionId: tran_id },
-            { paymentStatus: status === 'VALID' ? 'success' : 'failed' },
-        );
-    }
+    const { tran_id, status, val_id } = req.body;
+    console.log('📨 IPN received:', { tran_id, status, val_id });
+
+    // ✅ Always respond 200 to IPN first
     res.sendStatus(200);
+
+    if (tran_id && val_id) {
+        try {
+            // ✅ Validate with SSLCommerz
+            const SSLCommerzPayment = require('sslcommerz-lts');
+            const sslcz = new SSLCommerzPayment(process.env.STORE_ID, process.env.STORE_PASS, true);
+
+            const validation = await sslcz.validate({ val_id });
+            console.log('📨 IPN validation:', validation?.status);
+
+            if (validation?.status === 'VALID' || validation?.status === 'VALIDATED') {
+                await ExclusiveOfferParticipant.findOneAndUpdate(
+                    { transactionId: tran_id },
+                    {
+                        $set: {
+                            paymentStatus: 'success',
+                            sslValidationId: val_id,
+                            updatedAt: new Date(),
+                        },
+                    },
+                );
+                console.log('✅ IPN: DB updated for', tran_id);
+            }
+        } catch (e: any) {
+            console.error('❌ IPN error:', e.message);
+        }
+    }
 };
 
 // ✅ GET all participants
