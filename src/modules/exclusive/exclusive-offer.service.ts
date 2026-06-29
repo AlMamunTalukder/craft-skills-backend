@@ -8,7 +8,7 @@ import { ExclusiveOfferSettings } from './exclusive-offer-settings.model';
 import { appendDataToGoogleSheet } from 'src/utils/googleSheets';
 import { exclusiveOfferQueue } from 'src/queues/exclusiveOffer.queue';
 
-const FRONTEND_URL = 'https://craftskillsbd.com';
+// const FRONTEND_URL = 'https://craftskillsbd.com';
 
 const registerParticipant = async (payload: any) => {
     try {

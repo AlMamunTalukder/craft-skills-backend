@@ -5,8 +5,6 @@ import config from 'src/config';
 import { Course } from '../course/course.model';
 import { CourseBatch } from '../coursebatch/coursebatch.model';
 import AppError from 'src/errors/AppError';
-import { admissionPaymentService } from './admission-payment.service';
-import { Admission } from './admission.model';
 import { Coupon } from '../coupon/coupon.model';
 
 const FRONTEND_URL = 'https://craftskillsbd.com';

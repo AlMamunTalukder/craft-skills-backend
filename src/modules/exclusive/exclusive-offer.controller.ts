@@ -3,7 +3,6 @@ import sendResponse from 'src/utils/sendResponse';
 import { exclusiveOfferService } from './exclusive-offer.service';
 import { ExclusiveOfferParticipant } from './exclusive-offer.model';
 import { ExclusiveOfferSettings } from './exclusive-offer-settings.model';
-import config from 'src/config';
 import { ExclusiveVisitor } from './exclusive-visitor.model';
 
 const FRONTEND_URL = 'https://craftskillsbd.com';
@@ -27,9 +26,14 @@ const paymentSuccess = async (req: any, res: any) => {
         const { tran_id, val_id, amount, card_type } = req.body;
         const lookupTranId = req.body.value_a || tran_id;
 
-        console.log('📋 Looking up:', lookupTranId);
+        console.log('📋 lookupTranId:', lookupTranId);
 
-        // ✅ Find the participant
+        if (!lookupTranId) {
+            console.error('❌ No transaction ID found in callback');
+            return res.redirect(`${FRONTEND_URL}/exclusive/fail`);
+        }
+
+        // ✅ Find participant
         let participant = await ExclusiveOfferParticipant.findOne({
             transactionId: lookupTranId,
         });
@@ -40,91 +44,102 @@ const paymentSuccess = async (req: any, res: any) => {
         }
 
         console.log('✅ Found participant:', participant._id);
-        console.log('📋 Current name:', participant.name);
 
-        // ✅ Parse extra data
+        // ✅ Parse extra data - isolated try/catch
         let extraData: any = {};
         try {
             if (req.body.value_d) {
-                if (typeof req.body.value_d === 'string') {
-                    const cleanStr = req.body.value_d.replace(/^\uFEFF/, '').trim();
-                    if (cleanStr.startsWith('{') || cleanStr.startsWith('[')) {
-                        extraData = JSON.parse(cleanStr);
-                    }
-                } else if (typeof req.body.value_d === 'object') {
-                    extraData = req.body.value_d;
+                const cleanStr =
+                    typeof req.body.value_d === 'string'
+                        ? req.body.value_d.replace(/^\uFEFF/, '').trim()
+                        : '';
+                if (cleanStr.startsWith('{')) {
+                    extraData = JSON.parse(cleanStr);
                 }
             }
         } catch (e) {
-            console.warn('⚠️ Could not parse value_d');
+            console.warn('⚠️ Could not parse value_d, continuing anyway');
         }
 
-        // ✅ Update payment status - MATCH ADMISSION
-        await ExclusiveOfferParticipant.findOneAndUpdate(
-            { transactionId: lookupTranId },
-            {
-                $set: {
-                    paymentStatus: 'success',
-                    sslValidationId: val_id,
-                    paymentMethod: card_type || participant.paymentMethod || 'sslcommerz',
-                    updatedAt: new Date(),
-                    price: extraData?.price || participant.price || 199,
-                    name: extraData?.name || participant.name,
-                    whatsapp: extraData?.whatsapp || participant.whatsapp || '',
-                    occupation: extraData?.occupation || participant.occupation || '',
+        // ✅ Update payment status - isolated try/catch
+        try {
+            await ExclusiveOfferParticipant.findOneAndUpdate(
+                { transactionId: lookupTranId },
+                {
+                    $set: {
+                        paymentStatus: 'success',
+                        sslValidationId: val_id,
+                        paymentMethod: card_type || participant.paymentMethod || 'sslcommerz',
+                        updatedAt: new Date(),
+                        price: extraData?.price || participant.price || 199,
+                        name: extraData?.name || participant.name,
+                        whatsapp: extraData?.whatsapp || participant.whatsapp || '',
+                        occupation: extraData?.occupation || participant.occupation || '',
+                    },
                 },
-            },
-        );
-
-        // Fetch the updated record
-        const updatedParticipant = await ExclusiveOfferParticipant.findOne({
-            transactionId: lookupTranId,
-        });
-        console.log('✅ Updated. Name is now:', updatedParticipant?.name);
-
-        // ✅ Update visitor as registered
-        const visitorId = extraData?.visitorId || participant.visitorId;
-        if (visitorId) {
-            await ExclusiveVisitor.findOneAndUpdate(
-                { visitorId: visitorId },
-                { registered: true, isBlocked: false },
-                { upsert: true },
             );
-            console.log('✅ Visitor marked as registered');
+            console.log('✅ DB updated successfully');
+        } catch (dbError) {
+            console.error('❌ DB update error (non-fatal):', dbError);
+            // Continue - participant was found so we can still redirect to success
         }
 
-        // ✅ Add job to queue for Google Sheets
+        // ✅ Fetch updated record - isolated try/catch
+        let updatedParticipant = participant;
+        try {
+            const fresh = await ExclusiveOfferParticipant.findOne({ transactionId: lookupTranId });
+            if (fresh) updatedParticipant = fresh;
+        } catch (e) {
+            console.warn('⚠️ Could not fetch updated record, using original');
+        }
+
+        // ✅ Update visitor - isolated try/catch, NEVER fatal
+        try {
+            const visitorId = extraData?.visitorId || participant.visitorId;
+            if (visitorId) {
+                await ExclusiveVisitor.findOneAndUpdate(
+                    { visitorId },
+                    { registered: true, isBlocked: false },
+                    { upsert: true },
+                );
+                console.log('✅ Visitor marked as registered');
+            }
+        } catch (visitorError) {
+            console.error('❌ Visitor update error (non-fatal):', visitorError);
+        }
+
+        // ✅ Queue for Google Sheets - isolated try/catch, NEVER fatal
         try {
             await exclusiveOfferService.addToQueue({
-                name: updatedParticipant?.name || participant.name,
-                phone: updatedParticipant?.phone || participant.phone,
-                whatsapp: updatedParticipant?.whatsapp || participant.whatsapp || '',
-                email: updatedParticipant?.email || participant.email || '',
-                occupation: updatedParticipant?.occupation || participant.occupation || '',
+                name: updatedParticipant.name,
+                phone: updatedParticipant.phone,
+                whatsapp: updatedParticipant.whatsapp || '',
+                email: updatedParticipant.email || '',
+                occupation: updatedParticipant.occupation || '',
                 courseTitle: 'Voice & Public Speaking Masterclass',
-                offerPrice: updatedParticipant?.price || participant.price || 199,
+                offerPrice: updatedParticipant.price || 199,
                 transactionId: lookupTranId,
                 paymentStatus: 'success',
             });
             console.log('✅ Job added to queue');
         } catch (queueError) {
-            console.error('❌ Queue error:', queueError);
+            console.error('❌ Queue error (non-fatal):', queueError);
         }
 
-        // ✅ SUCCESS - Redirect to success page (MATCH ADMISSION)
+        // ✅ ALWAYS redirect to success if we got this far
         const params = new URLSearchParams({
-            name: updatedParticipant?.name || participant.name || '',
-            amount: String(updatedParticipant?.price || participant.price || amount || 199),
-            phone: updatedParticipant?.phone || participant.phone || '',
-            email: updatedParticipant?.email || participant.email || '',
+            name: updatedParticipant.name || '',
+            amount: String(updatedParticipant.price || amount || 199),
+            phone: updatedParticipant.phone || '',
+            email: updatedParticipant.email || '',
             tran_id: lookupTranId,
         });
 
-        console.log(`✅ Redirecting to: ${FRONTEND_URL}/exclusive/success?${params.toString()}`);
+        console.log('✅ Redirecting to success');
         return res.redirect(`${FRONTEND_URL}/exclusive/success?${params.toString()}`);
     } catch (error: any) {
-        console.error('❌ ERROR:', error.message);
-        console.error('❌ Stack:', error.stack);
+        console.error('❌ FATAL ERROR in paymentSuccess:', error.message);
+        console.error('Stack:', error.stack);
         return res.redirect(`${FRONTEND_URL}/exclusive/fail`);
     }
 };

@@ -84,7 +84,7 @@ new Worker(
                     participant.email || participantData.email || '',
                     participant.occupation || participantData.occupation || '',
                     participant.courseTitle || 'Voice & Public Speaking Masterclass',
-                    String(participant.offerPrice || participantData.offerPrice || 199),
+                    String((participant as any).price || participantData.offerPrice || 199),
                     participantData.transactionId || '',
                     participantData.paymentStatus || 'success',
                     registrationDate,
