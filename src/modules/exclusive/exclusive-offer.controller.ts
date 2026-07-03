@@ -394,16 +394,16 @@ const getPrice = catchAsync(async (req, res) => {
     sendResponse(res, {
         success: true,
         statusCode: 200,
-        data: settings || { price: 199, date: '', whatsappLink: '', fbLink: '' },
+        data: settings || { price: 199, date: '', whatsappLink: '' },
     });
 });
 
 // ✅ Update Price Setting (now accepts all settings fields)
 const updatePrice = catchAsync(async (req, res) => {
-    const { price, date, whatsappLink, fbLink } = req.body;
+    const { price, date, whatsappLink } = req.body;
     const settings = await ExclusiveOfferSettings.findOneAndUpdate(
         {},
-        { price, date, whatsappLink, fbLink },
+        { price, date, whatsappLink },
         { upsert: true, new: true },
     );
     sendResponse(res, {
