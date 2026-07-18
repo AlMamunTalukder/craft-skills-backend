@@ -1,4 +1,4 @@
-import type { Document } from 'mongoose';
+import type { Document, Types } from 'mongoose';
 
 export interface IExclusiveOfferParticipant extends Document {
     name: string;
@@ -12,7 +12,8 @@ export interface IExclusiveOfferParticipant extends Document {
     transactionId?: string;
     sslValidationId?: string;
     addedByAdmin?: boolean;
-    visitorId?: string; // ✅ ADD THIS
+    visitorId?: string;
+    batchId?: Types.ObjectId; // ✅ ADD THIS
     createdAt: Date;
     updatedAt: Date;
 }

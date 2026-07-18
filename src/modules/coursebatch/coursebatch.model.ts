@@ -56,7 +56,7 @@ const CourseBatchSchema = new Schema<ICourseBatch>(
 // Add indexes
 CourseBatchSchema.index({ isActive: 1 });
 CourseBatchSchema.index({ registrationStart: 1 });
-CourseBatchSchema.index({ code: 1 }, { unique: true });
+// CourseBatchSchema.index({ code: 1 }, { unique: true });
 
 // CORRECT EXPORT
 export const CourseBatch =

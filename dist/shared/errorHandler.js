@@ -3,9 +3,9 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-const index_1 = __importDefault(require("../config/index"));
+const index_1 = __importDefault(require("@/config/index"));
 const http_status_1 = __importDefault(require("http-status"));
-const handleZodError_1 = __importDefault(require("../errors/handleZodError"));
+const handleZodError_1 = __importDefault(require("src/errors/handleZodError"));
 const zod_1 = require("zod");
 const errorHandler = (err, _req, res, _next) => {
     const statusCode = http_status_1.default.INTERNAL_SERVER_ERROR;

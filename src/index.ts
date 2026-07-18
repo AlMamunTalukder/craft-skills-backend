@@ -53,34 +53,6 @@ app.use(requestLogger);
 app.use(express.json({ limit: '50mb' }));
 app.use(express.urlencoded({ limit: '50mb', extended: true }));
 
-// Enhanced session configuration
-
-// app.use(
-//     session({
-//         secret: config.sessionSecret,
-//         resave: false,
-//         saveUninitialized: false,
-
-//         store: MongoStore.create({
-//             mongoUrl: config.databaseUrl,
-//             ttl: 24 * 60 * 60,
-//         }),
-
-//         name: 'craftskills.session',
-
-//         cookie: {
-//             httpOnly: false,
-//             // secure: true,
-//             secure: false, //forlocallyitsfalse
-//             sameSite: 'none',
-//             domain: '.craftskillsbd.com',
-//             maxAge: 24 * 60 * 60 * 1000,
-//             path: '/',
-//         },
-
-//         proxy: true,
-//     }),
-// );
 app.use(
     session({
         secret: config.sessionSecret,
@@ -128,9 +100,11 @@ app.use(notFound);
 
 app.use(errorHandler);
 
+
 async function bootstrap(): Promise<void> {
     await connectDB();
     await connectRedis();
+
     app.listen(config.port, () => {
         logger.info(`Server is running on port ${config.port}`);
     });

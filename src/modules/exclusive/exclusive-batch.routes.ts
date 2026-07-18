@@ -1,0 +1,19 @@
+import { Router } from 'express';
+import { exclusiveBatchController } from './exclusive-batch.controller';
+import validateRequest from 'src/utils/validateRequest';
+import { createExclusiveBatchDto, updateExclusiveBatchDto } from './exclusive-batch.dto';
+
+const router = Router();
+
+// Public routes
+router.get('/', exclusiveBatchController.getAllBatches);
+router.get('/active', exclusiveBatchController.getActiveBatch);
+
+// Admin routes
+router.post('/', validateRequest(createExclusiveBatchDto), exclusiveBatchController.createBatch);
+router.get('/:id', exclusiveBatchController.getBatchById);
+router.put('/:id', validateRequest(updateExclusiveBatchDto), exclusiveBatchController.updateBatch);
+router.put('/:id/status', exclusiveBatchController.changeStatus);
+router.delete('/:id', exclusiveBatchController.deleteBatch);
+
+export const ExclusiveBatchRoutes = router;

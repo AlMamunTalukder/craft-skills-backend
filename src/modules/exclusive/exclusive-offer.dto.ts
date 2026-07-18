@@ -7,6 +7,7 @@ export const registerExclusiveOfferDto = z.object({
     whatsapp: z.string().optional(),
     occupation: z.string().optional(),
     visitorId: z.string().optional(),
+    batchId: z.string().optional(), // ✅ Add this
 });
 
 export type RegisterExclusiveOfferDto = z.infer<typeof registerExclusiveOfferDto>;

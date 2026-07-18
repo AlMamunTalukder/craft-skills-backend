@@ -2,8 +2,8 @@ import catchAsync from 'src/utils/catchAsync';
 import sendResponse from 'src/utils/sendResponse';
 import { exclusiveOfferService } from './exclusive-offer.service';
 import { ExclusiveOfferParticipant } from './exclusive-offer.model';
-import { ExclusiveOfferSettings } from './exclusive-offer-settings.model';
 import { ExclusiveVisitor } from './exclusive-visitor.model';
+import { ExclusiveBatch } from './exclusive-batch.model';
 
 const FRONTEND_URL = 'https://craftskillsbd.com';
 
@@ -18,16 +18,14 @@ const register = catchAsync(async (req, res) => {
 });
 
 // ✅ Payment Success - MATCH ADMISSION EXACTLY
-const paymentSuccess = async (req: any, res: any) => {
-    console.log('🎉 PAYMENT SUCCESS CALLBACK RECEIVED');
-    console.log('📥 Full Body:', JSON.stringify(req.body, null, 2));
 
+const paymentSuccess = async (req: any, res: any) => {
     try {
+        // console.log('🎉 PAYMENT SUCCESS CALLBACK RECEIVED');
+        // console.log('📥 Full Body:', JSON.stringify(req.body, null, 2));
+
         const { tran_id, val_id, amount, card_type } = req.body;
         const lookupTranId = req.body.value_a || tran_id;
-
-        console.log('📋 lookupTranId:', lookupTranId);
-        console.log('📋 val_id:', val_id);
 
         if (!lookupTranId || !val_id) {
             console.error('❌ Missing tran_id or val_id');
@@ -35,12 +33,11 @@ const paymentSuccess = async (req: any, res: any) => {
         }
 
         // ✅ STEP 1: Validate the transaction with SSLCommerz
-        console.log('🔍 Validating transaction with SSLCommerz...');
         const SSLCommerzPayment = require('sslcommerz-lts');
         const sslcz = new SSLCommerzPayment(
             process.env.STORE_ID,
             process.env.STORE_PASS,
-            true, // live mode
+            true,
         );
 
         let validationResponse: any = null;
@@ -54,7 +51,7 @@ const paymentSuccess = async (req: any, res: any) => {
 
         // ✅ STEP 2: Check validation status
         const isValid =
-            !validationResponse || // if validation API failed, trust the callback
+            !validationResponse ||
             validationResponse.status === 'VALID' ||
             validationResponse.status === 'VALIDATED';
 
@@ -75,12 +72,12 @@ const paymentSuccess = async (req: any, res: any) => {
             return res.redirect(`${FRONTEND_URL}/exclusive/fail`);
         }
 
-        console.log('✅ Found participant:', participant._id);
+        // console.log('✅ Found participant:', participant._id);
 
         // ✅ STEP 4: Parse extra data
         let extraData: any = {};
         try {
-            if (req.body.value_d) {
+            if (req.body.value_d) { 
                 const cleanStr =
                     typeof req.body.value_d === 'string'
                         ? req.body.value_d.replace(/^\uFEFF/, '').trim()
@@ -141,7 +138,32 @@ const paymentSuccess = async (req: any, res: any) => {
             console.error('❌ Visitor update error (non-fatal):', visitorError);
         }
 
-        // ✅ STEP 8: Queue for Google Sheets - never fatal
+        // ✅ STEP 8: Add participant to batch and update enrolled count
+        try {
+            const batchId = participant.batchId || extraData?.batchId;
+            if (batchId) {
+                const batch = await ExclusiveBatch.findByIdAndUpdate(
+                    batchId,
+                    {
+                        $push: { participants: participant._id },
+                        $inc: { enrolledCount: 1 }
+                    },
+                    { new: true }
+                );
+                console.log('✅ Participant added to batch:', {
+                    batchId,
+                    batchTitle: batch?.title,
+                    enrolledCount: batch?.enrolledCount
+                });
+            } else {
+                console.log('⚠️ No batchId found for participant, skipping batch update');
+            }
+        } catch (batchError) {
+            console.error('❌ Batch update error (non-fatal):', batchError);
+            // Continue anyway - don't block the user
+        }
+
+        // ✅ STEP 9: Queue for Google Sheets - never fatal
         try {
             await exclusiveOfferService.addToQueue({
                 name: updatedParticipant.name,
@@ -153,13 +175,14 @@ const paymentSuccess = async (req: any, res: any) => {
                 offerPrice: (updatedParticipant as any).price || 199,
                 transactionId: lookupTranId,
                 paymentStatus: 'success',
+                batchId: participant.batchId || extraData?.batchId,
             });
             console.log('✅ Job added to queue');
         } catch (queueError) {
             console.error('❌ Queue error (non-fatal):', queueError);
         }
 
-        // ✅ STEP 9: Always redirect to success
+        // ✅ STEP 10: Always redirect to success
         const params = new URLSearchParams({
             name: updatedParticipant.name || '',
             amount: String((updatedParticipant as any).price || amount || 199),
@@ -170,12 +193,171 @@ const paymentSuccess = async (req: any, res: any) => {
 
         console.log('✅ Redirecting to success page');
         return res.redirect(`${FRONTEND_URL}/exclusive/success?${params.toString()}`);
+        
     } catch (error: any) {
         console.error('❌ FATAL ERROR in paymentSuccess:', error.message);
         console.error('Stack:', error.stack);
         return res.redirect(`${FRONTEND_URL}/exclusive/fail`);
     }
 };
+// const paymentSuccess = async (req: any, res: any) => {
+//     // console.log('🎉 PAYMENT SUCCESS CALLBACK RECEIVED');
+//     // console.log('📥 Full Body:', JSON.stringify(req.body, null, 2));
+
+//     try {
+//         const { tran_id, val_id, amount, card_type } = req.body;
+//         const lookupTranId = req.body.value_a || tran_id;
+
+//         // console.log('📋 lookupTranId:', lookupTranId);
+//         // console.log('📋 val_id:', val_id);
+
+//         if (!lookupTranId || !val_id) {
+//             console.error('❌ Missing tran_id or val_id');
+//             return res.redirect(`${FRONTEND_URL}/exclusive/fail`);
+//         }
+
+//         // ✅ STEP 1: Validate the transaction with SSLCommerz
+//         // console.log('🔍 Validating transaction with SSLCommerz...');
+//         const SSLCommerzPayment = require('sslcommerz-lts');
+//         const sslcz = new SSLCommerzPayment(
+//             process.env.STORE_ID,
+//             process.env.STORE_PASS,
+//             true, // live mode
+//         );
+
+//         let validationResponse: any = null;
+//         try {
+//             validationResponse = await sslcz.validate({ val_id });
+//             // console.log('✅ SSLCommerz validation response:', JSON.stringify(validationResponse));
+//         } catch (validationError: any) {
+//             console.error('❌ SSLCommerz validation API error:', validationError.message);
+//             // Continue anyway — DB update still happened, don't block user
+//         }
+
+//         // ✅ STEP 2: Check validation status
+//         const isValid =
+//             !validationResponse || // if validation API failed, trust the callback
+//             validationResponse.status === 'VALID' ||
+//             validationResponse.status === 'VALIDATED';
+
+//         if (!isValid) {
+//             console.error('❌ Transaction not valid:', validationResponse?.status);
+//             return res.redirect(`${FRONTEND_URL}/exclusive/fail`);
+//         }
+
+//         console.log('✅ Transaction validated successfully');
+
+//         // ✅ STEP 3: Find participant
+//         let participant = await ExclusiveOfferParticipant.findOne({
+//             transactionId: lookupTranId,
+//         });
+
+//         if (!participant) {
+//             console.error('❌ No participant found for:', lookupTranId);
+//             return res.redirect(`${FRONTEND_URL}/exclusive/fail`);
+//         }
+
+//         console.log('✅ Found participant:', participant._id);
+
+//         // ✅ STEP 4: Parse extra data
+//         let extraData: any = {};
+//         try {
+//             if (req.body.value_d) {
+//                 const cleanStr =
+//                     typeof req.body.value_d === 'string'
+//                         ? req.body.value_d.replace(/^\uFEFF/, '').trim()
+//                         : '';
+//                 if (cleanStr.startsWith('{')) {
+//                     extraData = JSON.parse(cleanStr);
+//                 }
+//             }
+//         } catch (e) {
+//             console.warn('⚠️ Could not parse value_d, continuing anyway');
+//         }
+
+//         // ✅ STEP 5: Update DB - isolated, never fatal
+//         try {
+//             await ExclusiveOfferParticipant.findOneAndUpdate(
+//                 { transactionId: lookupTranId },
+//                 {
+//                     $set: {
+//                         paymentStatus: 'success',
+//                         sslValidationId: val_id,
+//                         paymentMethod: card_type || participant.paymentMethod || 'sslcommerz',
+//                         updatedAt: new Date(),
+//                         price: extraData?.price || participant.price || 199,
+//                         name: extraData?.name || participant.name,
+//                         whatsapp: extraData?.whatsapp || participant.whatsapp || '',
+//                         occupation: extraData?.occupation || participant.occupation || '',
+//                     },
+//                 },
+//             );
+//             // console.log('✅ DB updated successfully');
+//         } catch (dbError) {
+//             console.error('❌ DB update error (non-fatal):', dbError);
+//         }
+
+//         // ✅ STEP 6: Fetch updated record
+//         let updatedParticipant = participant;
+//         try {
+//             const fresh = await ExclusiveOfferParticipant.findOne({
+//                 transactionId: lookupTranId,
+//             });
+//             if (fresh) updatedParticipant = fresh;
+//         } catch (e) {
+//             console.warn('⚠️ Could not fetch updated record, using original');
+//         }
+
+//         // ✅ STEP 7: Update visitor - never fatal
+//         try {
+//             const visitorId = extraData?.visitorId || participant.visitorId;
+//             if (visitorId) {
+//                 await ExclusiveVisitor.findOneAndUpdate(
+//                     { visitorId },
+//                     { registered: true, isBlocked: false },
+//                     { upsert: true },
+//                 );
+//                 console.log('✅ Visitor marked as registered');
+//             }
+//         } catch (visitorError) {
+//             console.error('❌ Visitor update error (non-fatal):', visitorError);
+//         }
+
+//         // ✅ STEP 8: Queue for Google Sheets - never fatal
+//         try {
+//             await exclusiveOfferService.addToQueue({
+//                 name: updatedParticipant.name,
+//                 phone: updatedParticipant.phone,
+//                 whatsapp: updatedParticipant.whatsapp || '',
+//                 email: updatedParticipant.email || '',
+//                 occupation: updatedParticipant.occupation || '',
+//                 courseTitle: 'Voice & Public Speaking Masterclass',
+//                 offerPrice: (updatedParticipant as any).price || 199,
+//                 transactionId: lookupTranId,
+//                 paymentStatus: 'success',
+//             });
+//             console.log('✅ Job added to queue');
+//         } catch (queueError) {
+//             console.error('❌ Queue error (non-fatal):', queueError);
+//         }
+
+//         // ✅ STEP 9: Always redirect to success
+//         const params = new URLSearchParams({
+//             name: updatedParticipant.name || '',
+//             amount: String((updatedParticipant as any).price || amount || 199),
+//             phone: updatedParticipant.phone || '',
+//             email: updatedParticipant.email || '',
+//             tran_id: lookupTranId,
+//         });
+
+//         console.log('✅ Redirecting to success page');
+//         return res.redirect(`${FRONTEND_URL}/exclusive/success?${params.toString()}`);
+//     } catch (error: any) {
+//         console.error('❌ FATAL ERROR in paymentSuccess:', error.message);
+//         console.error('Stack:', error.stack);
+//         return res.redirect(`${FRONTEND_URL}/exclusive/fail`);
+//     }
+// };
 
 const paymentFail = catchAsync(async (req, res) => {
     const tran_id = req.body.tran_id || req.body.value_a;
@@ -294,15 +476,7 @@ const verifyPayment = catchAsync(async (req, res) => {
     sendResponse(res, { success: true, statusCode: 200, data: participant });
 });
 
-// ✅ GET all participants
-const getParticipants = catchAsync(async (req, res) => {
-    const participants = await ExclusiveOfferParticipant.find().sort({ createdAt: -1 });
-    sendResponse(res, {
-        success: true,
-        statusCode: 200,
-        data: participants,
-    });
-});
+
 
 // ✅ GET single participant
 const getParticipantById = catchAsync(async (req, res) => {
@@ -329,7 +503,19 @@ const createParticipant = catchAsync(async (req, res) => {
         ...req.body,
         addedByAdmin: true,
         paymentStatus: 'success',
+        batchId: req.body.batchId,
     });
+
+    // ✅ Also add this participant to the batch's participants array
+    if (req.body.batchId) {
+        await ExclusiveBatch.findByIdAndUpdate(
+            req.body.batchId,
+            { 
+                $push: { participants: participant._id },
+                $inc: { enrolledCount: 1 } // ✅ Increment enrolled count
+            }
+        );
+    }
 
     try {
         await exclusiveOfferService.sendToGoogleSheets(participant);
@@ -345,14 +531,13 @@ const createParticipant = catchAsync(async (req, res) => {
     });
 });
 
-// ✅ UPDATE participant
+// ✅ UPDATE participant - Handle batch change
 const updateParticipant = catchAsync(async (req, res) => {
     const { id } = req.params;
-    const participant = await ExclusiveOfferParticipant.findByIdAndUpdate(id, req.body, {
-        new: true,
-        runValidators: true,
-    });
-    if (!participant) {
+    
+    // Get the existing participant to check if batch changed
+    const existingParticipant = await ExclusiveOfferParticipant.findById(id);
+    if (!existingParticipant) {
         return sendResponse(res, {
             success: false,
             statusCode: 404,
@@ -360,6 +545,47 @@ const updateParticipant = catchAsync(async (req, res) => {
             data: null,
         });
     }
+
+    const oldBatchId = existingParticipant.batchId;
+    const newBatchId = req.body.batchId;
+
+    // Update the participant
+    const participant = await ExclusiveOfferParticipant.findByIdAndUpdate(
+        id,
+        { 
+            ...req.body,
+            batchId: newBatchId,
+        },
+        {
+            new: true,
+            runValidators: true,
+        }
+    );
+
+    // ✅ Handle batch changes
+    if (oldBatchId?.toString() !== newBatchId?.toString()) {
+        // Remove from old batch
+        if (oldBatchId) {
+            await ExclusiveBatch.findByIdAndUpdate(
+                oldBatchId,
+                { 
+                    $pull: { participants: participant._id },
+                    $inc: { enrolledCount: -1 }
+                }
+            );
+        }
+        // Add to new batch
+        if (newBatchId) {
+            await ExclusiveBatch.findByIdAndUpdate(
+                newBatchId,
+                { 
+                    $push: { participants: participant._id },
+                    $inc: { enrolledCount: 1 }
+                }
+            );
+        }
+    }
+
     sendResponse(res, {
         success: true,
         statusCode: 200,
@@ -368,10 +594,31 @@ const updateParticipant = catchAsync(async (req, res) => {
     });
 });
 
-// ✅ DELETE participant
+// ✅ GET participants - optionally filter by batchId
+const getParticipants = catchAsync(async (req, res) => {
+    const { batchId } = req.query;
+    const filter: any = {};
+    if (batchId) {
+        filter.batchId = batchId;
+    }
+    const participants = await ExclusiveOfferParticipant.find(filter)
+        .sort({ createdAt: -1 })
+        .populate('batchId', 'batchNo title');
+
+    sendResponse(res, {
+        success: true,
+        statusCode: 200,
+        data: participants,
+    });
+});
+
+
+// ✅ DELETE participant - Also remove from batch
 const deleteParticipant = catchAsync(async (req, res) => {
     const { id } = req.params;
-    const participant = await ExclusiveOfferParticipant.findByIdAndDelete(id);
+    
+    // Get the participant first to get batchId
+    const participant = await ExclusiveOfferParticipant.findById(id);
     if (!participant) {
         return sendResponse(res, {
             success: false,
@@ -380,6 +627,21 @@ const deleteParticipant = catchAsync(async (req, res) => {
             data: null,
         });
     }
+
+    // ✅ Remove from batch's participants array
+    if (participant.batchId) {
+        await ExclusiveBatch.findByIdAndUpdate(
+            participant.batchId,
+            { 
+                $pull: { participants: participant._id },
+                $inc: { enrolledCount: -1 }
+            }
+        );
+    }
+
+    // Delete the participant
+    await ExclusiveOfferParticipant.findByIdAndDelete(id);
+
     sendResponse(res, {
         success: true,
         statusCode: 200,
@@ -388,31 +650,7 @@ const deleteParticipant = catchAsync(async (req, res) => {
     });
 });
 
-// ✅ Get Price Setting (now returns all settings fields)
-const getPrice = catchAsync(async (req, res) => {
-    const settings = await ExclusiveOfferSettings.findOne();
-    sendResponse(res, {
-        success: true,
-        statusCode: 200,
-        data: settings || { price: 199, date: '', whatsappLink: '' },
-    });
-});
 
-// ✅ Update Price Setting (now accepts all settings fields)
-const updatePrice = catchAsync(async (req, res) => {
-    const { price, date, whatsappLink } = req.body;
-    const settings = await ExclusiveOfferSettings.findOneAndUpdate(
-        {},
-        { price, date, whatsappLink },
-        { upsert: true, new: true },
-    );
-    sendResponse(res, {
-        success: true,
-        statusCode: 200,
-        message: 'Settings updated successfully',
-        data: settings,
-    });
-});
 
 export const exclusiveOfferController = {
     register,
@@ -425,9 +663,7 @@ export const exclusiveOfferController = {
     getParticipantById,
     createParticipant,
     updateParticipant,
-    deleteParticipant,
-    getPrice,
-    updatePrice,
+    deleteParticipant,    
 };
 
 // import catchAsync from 'src/utils/catchAsync';

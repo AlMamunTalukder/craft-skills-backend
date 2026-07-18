@@ -16,6 +16,8 @@ import { SeminarConfirmationRoutes } from 'src/modules/seminar-confirmation/semi
 import { reviewRoutes } from 'src/modules/review/review.routes';
 import { ExclusiveOfferRoutes } from 'src/modules/exclusive/exclusive-offer.routes';
 import { ExclusiveVisitorRoutes } from 'src/modules/exclusive/exclusive-visitor.routes';
+import { ExclusiveBatchRoutes } from 'src/modules/exclusive/exclusive-batch.routes';
+import { ExclusiveGiftRoutes } from 'src/modules/exclusive/exclusive-gift.routes';
 
 const router = Router();
 
@@ -76,6 +78,15 @@ const moduleRoutes = [
     {
         path: '/exclusive-offer',
         route: ExclusiveOfferRoutes,
+    },
+
+    {
+        path: '/exclusive-batches',
+        route: ExclusiveBatchRoutes,
+    },
+    {
+        path: '/exclusive-gift',
+        route: ExclusiveGiftRoutes,
     },
 
     {

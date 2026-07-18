@@ -4,17 +4,17 @@ import config from 'src/config';
 import { sanitizePhoneNumber } from 'src/utils/phoneSanitizer';
 import { ExclusiveVisitor } from './exclusive-visitor.model';
 import { ExclusiveOfferParticipant } from './exclusive-offer.model';
-import { ExclusiveOfferSettings } from './exclusive-offer-settings.model';
 import { appendDataToGoogleSheet } from 'src/utils/googleSheets';
 import { exclusiveOfferQueue } from 'src/queues/exclusiveOffer.queue';
+import { ExclusiveBatch } from './exclusive-batch.model';
 
 const FRONTEND_URL = 'https://craftskillsbd.com';
 
 const registerParticipant = async (payload: any) => {
     try {
         // 1. Get price from settings
-        const settings = await ExclusiveOfferSettings.findOne();
-        const price = settings?.price || 199;
+        const settings = await ExclusiveBatch.findById(payload.batchId);
+        const price = settings?.offerPrice;
 
         // 2. Check if visitor is blocked
         if (payload.visitorId) {
@@ -45,7 +45,18 @@ const registerParticipant = async (payload: any) => {
             paymentStatus: 'pending',
             paymentMethod: 'sslcommerz',
             visitorId: payload.visitorId || '',
+            batchId: payload.batchId || null, // ✅ Save batchId
         });
+
+        if (payload.batchId) {
+            await ExclusiveBatch.findByIdAndUpdate(
+                payload.batchId,
+                { 
+                    $push: { participants: participant._id },
+                    $inc: { enrolledCount: 1 }
+                }
+            );
+        }
 
         // 6. Prepare SSLCommerz data - MATCH ADMISSION
         const sslData = {

@@ -26,8 +26,5 @@ router.post('/participants', exclusiveOfferController.createParticipant);
 router.put('/participants/:id', exclusiveOfferController.updateParticipant);
 router.delete('/participants/:id', exclusiveOfferController.deleteParticipant);
 
-// ✅ Price settings routes
-router.get('/price', exclusiveOfferController.getPrice);
-router.put('/price', exclusiveOfferController.updatePrice);
 
 export const ExclusiveOfferRoutes = router;
