@@ -49,13 +49,10 @@ const registerParticipant = async (payload: any) => {
         });
 
         if (payload.batchId) {
-            await ExclusiveBatch.findByIdAndUpdate(
-                payload.batchId,
-                { 
-                    $push: { participants: participant._id },
-                    $inc: { enrolledCount: 1 }
-                }
-            );
+            await ExclusiveBatch.findByIdAndUpdate(payload.batchId, {
+                $push: { participants: participant._id },
+                $inc: { enrolledCount: 1 },
+            });
         }
 
         // 6. Prepare SSLCommerz data - MATCH ADMISSION

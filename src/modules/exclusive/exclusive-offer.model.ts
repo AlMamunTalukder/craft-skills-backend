@@ -13,7 +13,6 @@ const ExclusiveOfferParticipantSchema = new Schema<IExclusiveOfferParticipant>(
         paymentMethod: { type: String, default: 'sslcommerz' },
         transactionId: {
             type: String,
-
         },
         sslValidationId: { type: String },
         addedByAdmin: { type: Boolean, default: false },
@@ -22,7 +21,7 @@ const ExclusiveOfferParticipantSchema = new Schema<IExclusiveOfferParticipant>(
         batchId: {
             type: Schema.Types.ObjectId,
             ref: 'ExclusiveBatch',
-            required: false
+            required: false,
         },
     },
     { timestamps: true, collection: 'exclusive_offer_participants' },

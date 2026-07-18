@@ -55,9 +55,8 @@ const ExclusiveGiftSchema = new Schema<IExclusiveGift>(
     {
         timestamps: true,
         collection: 'exclusive_gifts',
-    }
+    },
 );
 
 export const ExclusiveGift =
-    models.ExclusiveGift ||
-    model<IExclusiveGift>('ExclusiveGift', ExclusiveGiftSchema);
+    models.ExclusiveGift || model<IExclusiveGift>('ExclusiveGift', ExclusiveGiftSchema);

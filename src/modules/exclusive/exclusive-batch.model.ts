@@ -10,7 +10,7 @@ export interface IExclusiveBatch extends Document {
     isActive: boolean;
     offerPrice: number;
     regularPrice: number;
-   
+
     enrolledCount: number;
     participants: Types.ObjectId[]; // ✅ Reference to participants
     createdAt: Date;
@@ -53,7 +53,7 @@ const ExclusiveBatchSchema = new Schema<IExclusiveBatch>(
             type: Number,
             default: 5500,
         },
-       
+
         enrolledCount: {
             type: Number,
             default: 0,
@@ -68,7 +68,7 @@ const ExclusiveBatchSchema = new Schema<IExclusiveBatch>(
     {
         timestamps: true,
         collection: 'exclusive_batches',
-    }
+    },
 );
 
 ExclusiveBatchSchema.index({ batchNo: 1 });
@@ -76,5 +76,4 @@ ExclusiveBatchSchema.index({ isActive: 1 });
 ExclusiveBatchSchema.index({ date: 1 });
 
 export const ExclusiveBatch =
-    models.ExclusiveBatch ||
-    model<IExclusiveBatch>('ExclusiveBatch', ExclusiveBatchSchema);
+    models.ExclusiveBatch || model<IExclusiveBatch>('ExclusiveBatch', ExclusiveBatchSchema);

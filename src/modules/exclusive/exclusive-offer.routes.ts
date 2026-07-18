@@ -26,5 +26,4 @@ router.post('/participants', exclusiveOfferController.createParticipant);
 router.put('/participants/:id', exclusiveOfferController.updateParticipant);
 router.delete('/participants/:id', exclusiveOfferController.deleteParticipant);
 
-
 export const ExclusiveOfferRoutes = router;

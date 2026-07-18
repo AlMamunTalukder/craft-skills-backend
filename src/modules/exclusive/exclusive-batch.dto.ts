@@ -9,7 +9,6 @@ export const createExclusiveBatchDto = z.object({
     isActive: z.boolean().optional().default(true),
     offerPrice: z.number().default(199),
     regularPrice: z.number().default(5500),
-   
 });
 
 export const updateExclusiveBatchDto = createExclusiveBatchDto.partial();

@@ -1,20 +1,19 @@
-import mongoose from "mongoose";
-import config from "@/config";
-import logger from "./logger";
+import mongoose from 'mongoose';
+import config from '@/config';
+import logger from './logger';
 
 const connectDB = async (): Promise<void> => {
     try {
         await mongoose.connect(config.databaseUrl);
 
-        logger.info("MongoDB connected successfully");
+        logger.info('MongoDB connected successfully');
     } catch (error) {
-        logger.error("Failed to connect MongoDB", error);
+        logger.error('Failed to connect MongoDB', error);
         process.exit(1);
     }
 };
 
 export default connectDB;
-
 
 // import mongoose from 'mongoose';
 // import config from '@/config/index';

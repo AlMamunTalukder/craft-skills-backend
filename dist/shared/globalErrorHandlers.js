@@ -9,8 +9,8 @@ const setupGlobalErrorHandlers = () => {
         logger_1.default.error('Uncaught Exception:', error);
         process.exit(1);
     });
-    process.on("unhandledRejection", (reason) => {
-        console.error("===========");
+    process.on('unhandledRejection', (reason) => {
+        console.error('===========');
         console.error(reason);
         if (reason instanceof Error) {
             console.error(reason.stack);

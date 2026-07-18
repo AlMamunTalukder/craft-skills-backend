@@ -5,11 +5,7 @@ import { exclusiveGiftController } from './exclusive-gift.controller';
 
 const router = Router();
 
-router.post(
-    '/confirm',
-    validateRequest(exclusiveGiftDto),
-    exclusiveGiftController.confirmGift,
-);
+router.post('/confirm', validateRequest(exclusiveGiftDto), exclusiveGiftController.confirmGift);
 
 router.get('/confirm', (req, res) => {
     res.status(200).json({

@@ -100,7 +100,6 @@ app.use(notFound);
 
 app.use(errorHandler);
 
-
 async function bootstrap(): Promise<void> {
     await connectDB();
     await connectRedis();

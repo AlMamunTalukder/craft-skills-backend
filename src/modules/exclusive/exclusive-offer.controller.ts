@@ -34,11 +34,7 @@ const paymentSuccess = async (req: any, res: any) => {
 
         // ✅ STEP 1: Validate the transaction with SSLCommerz
         const SSLCommerzPayment = require('sslcommerz-lts');
-        const sslcz = new SSLCommerzPayment(
-            process.env.STORE_ID,
-            process.env.STORE_PASS,
-            true,
-        );
+        const sslcz = new SSLCommerzPayment(process.env.STORE_ID, process.env.STORE_PASS, true);
 
         let validationResponse: any = null;
         try {
@@ -77,7 +73,7 @@ const paymentSuccess = async (req: any, res: any) => {
         // ✅ STEP 4: Parse extra data
         let extraData: any = {};
         try {
-            if (req.body.value_d) { 
+            if (req.body.value_d) {
                 const cleanStr =
                     typeof req.body.value_d === 'string'
                         ? req.body.value_d.replace(/^\uFEFF/, '').trim()
@@ -146,14 +142,14 @@ const paymentSuccess = async (req: any, res: any) => {
                     batchId,
                     {
                         $push: { participants: participant._id },
-                        $inc: { enrolledCount: 1 }
+                        $inc: { enrolledCount: 1 },
                     },
-                    { new: true }
+                    { new: true },
                 );
                 console.log('✅ Participant added to batch:', {
                     batchId,
                     batchTitle: batch?.title,
-                    enrolledCount: batch?.enrolledCount
+                    enrolledCount: batch?.enrolledCount,
                 });
             } else {
                 console.log('⚠️ No batchId found for participant, skipping batch update');
@@ -193,7 +189,6 @@ const paymentSuccess = async (req: any, res: any) => {
 
         console.log('✅ Redirecting to success page');
         return res.redirect(`${FRONTEND_URL}/exclusive/success?${params.toString()}`);
-        
     } catch (error: any) {
         console.error('❌ FATAL ERROR in paymentSuccess:', error.message);
         console.error('Stack:', error.stack);
@@ -476,8 +471,6 @@ const verifyPayment = catchAsync(async (req, res) => {
     sendResponse(res, { success: true, statusCode: 200, data: participant });
 });
 
-
-
 // ✅ GET single participant
 const getParticipantById = catchAsync(async (req, res) => {
     const { id } = req.params;
@@ -508,13 +501,10 @@ const createParticipant = catchAsync(async (req, res) => {
 
     // ✅ Also add this participant to the batch's participants array
     if (req.body.batchId) {
-        await ExclusiveBatch.findByIdAndUpdate(
-            req.body.batchId,
-            { 
-                $push: { participants: participant._id },
-                $inc: { enrolledCount: 1 } // ✅ Increment enrolled count
-            }
-        );
+        await ExclusiveBatch.findByIdAndUpdate(req.body.batchId, {
+            $push: { participants: participant._id },
+            $inc: { enrolledCount: 1 }, // ✅ Increment enrolled count
+        });
     }
 
     try {
@@ -534,7 +524,7 @@ const createParticipant = catchAsync(async (req, res) => {
 // ✅ UPDATE participant - Handle batch change
 const updateParticipant = catchAsync(async (req, res) => {
     const { id } = req.params;
-    
+
     // Get the existing participant to check if batch changed
     const existingParticipant = await ExclusiveOfferParticipant.findById(id);
     if (!existingParticipant) {
@@ -552,37 +542,31 @@ const updateParticipant = catchAsync(async (req, res) => {
     // Update the participant
     const participant = await ExclusiveOfferParticipant.findByIdAndUpdate(
         id,
-        { 
+        {
             ...req.body,
             batchId: newBatchId,
         },
         {
             new: true,
             runValidators: true,
-        }
+        },
     );
 
     // ✅ Handle batch changes
     if (oldBatchId?.toString() !== newBatchId?.toString()) {
         // Remove from old batch
         if (oldBatchId) {
-            await ExclusiveBatch.findByIdAndUpdate(
-                oldBatchId,
-                { 
-                    $pull: { participants: participant._id },
-                    $inc: { enrolledCount: -1 }
-                }
-            );
+            await ExclusiveBatch.findByIdAndUpdate(oldBatchId, {
+                $pull: { participants: participant._id },
+                $inc: { enrolledCount: -1 },
+            });
         }
         // Add to new batch
         if (newBatchId) {
-            await ExclusiveBatch.findByIdAndUpdate(
-                newBatchId,
-                { 
-                    $push: { participants: participant._id },
-                    $inc: { enrolledCount: 1 }
-                }
-            );
+            await ExclusiveBatch.findByIdAndUpdate(newBatchId, {
+                $push: { participants: participant._id },
+                $inc: { enrolledCount: 1 },
+            });
         }
     }
 
@@ -612,11 +596,10 @@ const getParticipants = catchAsync(async (req, res) => {
     });
 });
 
-
 // ✅ DELETE participant - Also remove from batch
 const deleteParticipant = catchAsync(async (req, res) => {
     const { id } = req.params;
-    
+
     // Get the participant first to get batchId
     const participant = await ExclusiveOfferParticipant.findById(id);
     if (!participant) {
@@ -630,13 +613,10 @@ const deleteParticipant = catchAsync(async (req, res) => {
 
     // ✅ Remove from batch's participants array
     if (participant.batchId) {
-        await ExclusiveBatch.findByIdAndUpdate(
-            participant.batchId,
-            { 
-                $pull: { participants: participant._id },
-                $inc: { enrolledCount: -1 }
-            }
-        );
+        await ExclusiveBatch.findByIdAndUpdate(participant.batchId, {
+            $pull: { participants: participant._id },
+            $inc: { enrolledCount: -1 },
+        });
     }
 
     // Delete the participant
@@ -650,8 +630,6 @@ const deleteParticipant = catchAsync(async (req, res) => {
     });
 });
 
-
-
 export const exclusiveOfferController = {
     register,
     paymentSuccess,
@@ -663,7 +641,7 @@ export const exclusiveOfferController = {
     getParticipantById,
     createParticipant,
     updateParticipant,
-    deleteParticipant,    
+    deleteParticipant,
 };
 
 // import catchAsync from 'src/utils/catchAsync';
