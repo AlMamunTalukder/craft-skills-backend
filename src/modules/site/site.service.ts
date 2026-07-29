@@ -7,18 +7,24 @@ import logger from 'src/shared/logger';
 const CACHE_KEY = 'site_data';
 
 const getSiteData = async (): Promise<ISite | null> => {
-    const cachedData = await redisClient.get(CACHE_KEY);
-    if (cachedData) {
-        logger.info('Site data retrieved from cache');
-        return JSON.parse(cachedData) as ISite;
+    try {
+        const cachedData = await redisClient.get(CACHE_KEY);
+        if (cachedData) {
+            return JSON.parse(cachedData) as ISite;
+        }
+    } catch (err) {
+        logger.warn('Redis get error, falling back to MongoDB', err);
     }
 
-    const siteData = await Site.findOne();
+    const siteData = await Site.findOne().lean();
     if (siteData) {
-        await redisClient.set(CACHE_KEY, JSON.stringify(siteData));
-        logger.info('Site data retrieved from MongoDB & cached permanently');
+        try {
+            await redisClient.set(CACHE_KEY, JSON.stringify(siteData));
+        } catch (err) {
+            logger.warn('Redis set error', err);
+        }
     }
-    return siteData;
+    return siteData as ISite | null;
 };
 
 const updateSiteData = async (data: SiteDto): Promise<ISite | null> => {

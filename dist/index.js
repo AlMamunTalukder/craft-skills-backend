@@ -4,25 +4,25 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
 };
 Object.defineProperty(exports, "__esModule", { value: true });
 const express_1 = __importDefault(require("express"));
-const index_1 = __importDefault(require("@/routes/index"));
-const logger_1 = __importDefault(require("@/shared/logger"));
-const requestLogger_1 = __importDefault(require("@/shared/requestLogger"));
-const errorHandler_1 = __importDefault(require("@/shared/errorHandler"));
-const globalErrorHandlers_1 = __importDefault(require("@/shared/globalErrorHandlers"));
-const db_1 = __importDefault(require("@/shared/db"));
-const index_2 = __importDefault(require("@/config/index"));
+const index_1 = __importDefault(require("./routes/index"));
+const logger_1 = __importDefault(require("./shared/logger"));
+const requestLogger_1 = __importDefault(require("./shared/requestLogger"));
+const errorHandler_1 = __importDefault(require("./shared/errorHandler"));
+const globalErrorHandlers_1 = __importDefault(require("./shared/globalErrorHandlers"));
+const db_1 = __importDefault(require("./shared/db"));
+const index_2 = __importDefault(require("./config/index"));
 const morgan_1 = __importDefault(require("morgan"));
 const cors_1 = __importDefault(require("cors"));
 const express_session_1 = __importDefault(require("express-session"));
 const passport_1 = __importDefault(require("passport"));
-const notFound_1 = __importDefault(require("@/routes/notFound"));
+const notFound_1 = __importDefault(require("./routes/notFound"));
 const connect_mongo_1 = __importDefault(require("connect-mongo"));
-const redis_1 = require("@/config/redis");
+const redis_1 = require("./config/redis");
 const cookie_parser_1 = __importDefault(require("cookie-parser"));
-require("@/workers/participant.worker");
-require("@/workers/admission.worker");
-require("@/workers/seminar-confirmation.worker");
-require("@/workers/exclusive-offer-queue.worker");
+require("./workers/participant.worker");
+require("./workers/admission.worker");
+require("./workers/seminar-confirmation.worker");
+require("./workers/exclusive-offer-queue.worker");
 (0, globalErrorHandlers_1.default)();
 const app = (0, express_1.default)();
 if (index_2.default.env === 'production') {
@@ -48,7 +48,7 @@ app.use((0, cors_1.default)({
 app.use(requestLogger_1.default);
 app.use(express_1.default.json({ limit: '50mb' }));
 app.use(express_1.default.urlencoded({ limit: '50mb', extended: true }));
-app.use((0, express_session_1.default)({
+const sessionMiddleware = (0, express_session_1.default)({
     secret: index_2.default.sessionSecret,
     resave: false,
     saveUninitialized: false,
@@ -63,7 +63,22 @@ app.use((0, express_session_1.default)({
         path: '/',
     },
     proxy: index_2.default.env === 'production',
-}));
+});
+const publicStaticPaths = [
+    '/api/v1/site',
+    '/api/v1/seminars/active',
+    '/api/v1/courses',
+    '/api/v1/course-batches/active',
+    '/api/v1/exclusive-batches/active',
+    '/health',
+    '/',
+];
+app.use((req, res, next) => {
+    if (req.method === 'GET' && publicStaticPaths.some((p) => req.path === p || req.path.startsWith(p + '?'))) {
+        return next();
+    }
+    sessionMiddleware(req, res, next);
+});
 app.use(passport_1.default.initialize());
 app.use(passport_1.default.session());
 app.use('/api/v1', index_1.default);

@@ -27,15 +27,12 @@ const createSeminar = async (seminarData: Partial<ISeminar>): Promise<ISeminar> 
 };
 
 const getSeminarById = async (id: string): Promise<ISeminar> => {
-    const seminar = await Seminar.findById(id).populate({
-        path: 'participants',
-        options: { sort: { registeredAt: -1 } },
-    });
+    const seminar = await Seminar.findById(id).lean();
 
     if (!seminar) {
         throw new AppError(404, 'Seminar not found');
     }
-    return seminar;
+    return seminar as unknown as ISeminar;
 };
 
 const updateSeminar = async (id: string, seminarData: Partial<ISeminar>): Promise<ISeminar> => {
@@ -73,9 +70,9 @@ const getActiveSeminar = async (): Promise<ISeminar | null> => {
         const seminar = await Seminar.findOne({
             isActive: true,
             registrationDeadline: { $gte: sixHoursAgo },
-        }).sort({ date: 1 });
+        }).sort({ date: 1 }).lean();
 
-        return seminar;
+        return seminar as unknown as ISeminar | null;
     } catch (error: any) {
         return null;
     }
@@ -83,19 +80,8 @@ const getActiveSeminar = async (): Promise<ISeminar | null> => {
 
 const getPdfSeminar = async (): Promise<ISeminar | null> => {
     try {
-        // Get all seminars, convert sl to number for sorting
-        const seminars = await Seminar.find({});
-        if (seminars.length === 0) return null;
-
-        // Sort by sl as number (descending), then by date descending
-        const sorted = seminars.sort((a, b) => {
-            const slA = parseInt(a.sl as string, 10) || 0;
-            const slB = parseInt(b.sl as string, 10) || 0;
-            if (slA !== slB) return slB - slA;
-            return new Date(b.date).getTime() - new Date(a.date).getTime();
-        });
-
-        return sorted[0];
+        const seminar = await Seminar.findOne({}).sort({ date: -1 }).lean();
+        return seminar as unknown as ISeminar | null;
     } catch (error: any) {
         return null;
     }

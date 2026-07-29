@@ -34,12 +34,8 @@ new Worker(
                 { session },
             );
 
-            // 3. Update seminar
-            const seminar = await Seminar.findByIdAndUpdate(
-                participantData.seminarId,
-                { $push: { participants: participant._id } },
-                { new: true, session },
-            );
+            // 3. Verify seminar exists
+            const seminar = await Seminar.findById(participantData.seminarId).session(session);
 
             if (!seminar) {
                 throw new Error(`Seminar with ID ${participantData.seminarId} not found`);

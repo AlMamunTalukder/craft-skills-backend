@@ -45,6 +45,11 @@ const ParticipantSchema = new Schema<IParticipant>(
     },
 );
 
+ParticipantSchema.index({ seminarId: 1 });
+ParticipantSchema.index({ phone: 1 });
+ParticipantSchema.index({ email: 1 });
+ParticipantSchema.index({ registeredAt: -1 });
+
 const SeminarSchema = new Schema<ISeminar>(
     {
         sl: { type: String },

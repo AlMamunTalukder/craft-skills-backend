@@ -4,8 +4,8 @@ import type { IExclusiveBatch } from './exclusive-batch.model';
 
 const getAllBatches = async (): Promise<IExclusiveBatch[]> => {
     try {
-        const batches = await ExclusiveBatch.find().sort({ batchNo: -1 }).populate('participants');
-        return batches;
+        const batches = await ExclusiveBatch.find().sort({ batchNo: -1 }).lean();
+        return batches as unknown as IExclusiveBatch[];
     } catch (error: any) {
         throw new AppError(500, 'Database error: ' + error.message);
     }
@@ -19,8 +19,8 @@ const getActiveBatch = async (): Promise<IExclusiveBatch | null> => {
             registrationDeadline: { $gte: now },
         })
             .sort({ date: 1 })
-            .populate('participants');
-        return batch;
+            .lean();
+        return batch as unknown as IExclusiveBatch | null;
     } catch (error: any) {
         return null;
     }

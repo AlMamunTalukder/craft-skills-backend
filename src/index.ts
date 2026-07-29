@@ -53,24 +53,39 @@ app.use(requestLogger);
 app.use(express.json({ limit: '50mb' }));
 app.use(express.urlencoded({ limit: '50mb', extended: true }));
 
-app.use(
-    session({
-        secret: config.sessionSecret,
-        resave: false,
-        saveUninitialized: false,
-        store: MongoStore.create({ mongoUrl: config.databaseUrl, ttl: 24 * 60 * 60 }),
-        name: 'craftskills.session',
-        cookie: {
-            httpOnly: true,
-            secure: config.env === 'production',
-            sameSite: config.env === 'production' ? 'none' : 'lax',
-            maxAge: 24 * 60 * 60 * 1000,
-            domain: config.env === 'production' ? '.craftskillsbd.com' : undefined,
-            path: '/',
-        },
-        proxy: config.env === 'production',
-    }),
-);
+const sessionMiddleware = session({
+    secret: config.sessionSecret,
+    resave: false,
+    saveUninitialized: false,
+    store: MongoStore.create({ mongoUrl: config.databaseUrl, ttl: 24 * 60 * 60 }),
+    name: 'craftskills.session',
+    cookie: {
+        httpOnly: true,
+        secure: config.env === 'production',
+        sameSite: config.env === 'production' ? 'none' : 'lax',
+        maxAge: 24 * 60 * 60 * 1000,
+        domain: config.env === 'production' ? '.craftskillsbd.com' : undefined,
+        path: '/',
+    },
+    proxy: config.env === 'production',
+});
+
+const publicStaticPaths = [
+    '/api/v1/site',
+    '/api/v1/seminars/active',
+    '/api/v1/courses',
+    '/api/v1/course-batches/active',
+    '/api/v1/exclusive-batches/active',
+    '/health',
+    '/',
+];
+
+app.use((req, res, next) => {
+    if (req.method === 'GET' && publicStaticPaths.some((p) => req.path === p || req.path.startsWith(p + '?'))) {
+        return next();
+    }
+    sessionMiddleware(req, res, next);
+});
 
 app.use(passport.initialize());
 app.use(passport.session());
