@@ -19,6 +19,7 @@ const notFound_1 = __importDefault(require("./routes/notFound"));
 const connect_mongo_1 = __importDefault(require("connect-mongo"));
 const redis_1 = require("./config/redis");
 const cookie_parser_1 = __importDefault(require("cookie-parser"));
+const auth_1 = require("./middleware/auth");
 require("./workers/participant.worker");
 require("./workers/admission.worker");
 require("./workers/seminar-confirmation.worker");
@@ -57,7 +58,7 @@ const sessionMiddleware = (0, express_session_1.default)({
     cookie: {
         httpOnly: true,
         secure: index_2.default.env === 'production',
-        sameSite: index_2.default.env === 'production' ? 'none' : 'lax',
+        sameSite: 'lax',
         maxAge: 24 * 60 * 60 * 1000,
         domain: index_2.default.env === 'production' ? '.craftskillsbd.com' : undefined,
         path: '/',
@@ -74,7 +75,8 @@ const publicStaticPaths = [
     '/',
 ];
 app.use((req, res, next) => {
-    if (req.method === 'GET' && publicStaticPaths.some((p) => req.path === p || req.path.startsWith(p + '?'))) {
+    if (req.method === 'GET' &&
+        publicStaticPaths.some((p) => req.path === p || req.path.startsWith(p + '?'))) {
         return next();
     }
     sessionMiddleware(req, res, next);
@@ -82,7 +84,7 @@ app.use((req, res, next) => {
 app.use(passport_1.default.initialize());
 app.use(passport_1.default.session());
 app.use('/api/v1', index_1.default);
-app.get('/api/v1/debug/session', (req, res) => {
+app.get('/api/v1/debug/session', (0, auth_1.auth)(['admin']), (req, res) => {
     res.json({
         sessionId: req.sessionID,
         authenticated: req.isAuthenticated ? req.isAuthenticated() : false,

@@ -21,7 +21,7 @@ export const courseController = {
 
     getCourseById: async (req: Request, res: Response) => {
         try {
-            const course = await courseService.getCourseById(req.params.id);
+            const course = await courseService.getCourseById(String(req.params.id));
             res.json({
                 success: true,
                 message: 'Course retrieved successfully',
@@ -53,7 +53,7 @@ export const courseController = {
 
     updateCourse: async (req: Request, res: Response) => {
         try {
-            const course = await courseService.updateCourse(req.params.id, req.body);
+            const course = await courseService.updateCourse(String(req.params.id), req.body);
             res.json({
                 success: true,
                 message: 'Course updated successfully',
@@ -69,7 +69,7 @@ export const courseController = {
 
     deleteCourse: async (req: Request, res: Response) => {
         try {
-            await courseService.deleteCourse(req.params.id);
+            await courseService.deleteCourse(String(req.params.id));
             res.json({
                 success: true,
                 message: 'Course deleted successfully',

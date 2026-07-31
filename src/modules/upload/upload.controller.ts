@@ -43,7 +43,7 @@ const uploadImage = catchAsync(async (req: Request, res: Response) => {
             },
         });
     } catch (error) {
-        logger.error('Cloudinary upload failed:', error);
+        logger.error(error, 'Cloudinary upload failed:');
 
         // Fallback to base64 only if absolutely necessary
         // But first, let's check why Cloudinary failed

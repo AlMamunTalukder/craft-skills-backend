@@ -29,7 +29,7 @@ export const appendDataToGoogleSheet = async (
         });
 
         const existingTabs = meta.data.sheets?.map((s) => s.properties?.title);
-        logger.info(`Existing tabs in spreadsheet: ${existingTabs?.join(', ')}`);
+        logger.info(`Existing tabs in spreadsheet: ${existingTabs?.join(' + " " + ')}`);
 
         if (!existingTabs?.includes(sanitizedTitle)) {
             logger.info(`Tab "${sanitizedTitle}" not found. Creating it...`);
@@ -68,11 +68,11 @@ export const appendDataToGoogleSheet = async (
         });
         logger.info(`Successfully appended data to Google Sheet: ${sanitizedTitle}`);
     } catch (error: any) {
-        logger.error(`Error in appendDataToGoogleSheet: ${error.message}`, {
+        logger.error({
             error,
             tabTitle: sanitizedTitle,
             spreadsheetId: SPREADSHEET_ID,
-        });
+        }, `Error in appendDataToGoogleSheet: ${error.message}`);
         throw error;
     }
 };

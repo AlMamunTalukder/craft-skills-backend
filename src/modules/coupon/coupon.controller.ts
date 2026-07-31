@@ -20,7 +20,7 @@ export const couponController = {
     // Get coupon by ID
     getCouponById: async (req: Request, res: Response) => {
         try {
-            const { id } = req.params;
+            const id = req.params.id as string;
             const coupon = await couponService.getCouponById(id);
             res.json({ success: true, data: coupon });
         } catch (error) {
@@ -36,7 +36,7 @@ export const couponController = {
     // Get coupon by code (public endpoint)
     getCouponByCode: async (req: Request, res: Response) => {
         try {
-            const { code } = req.params;
+            const code = req.params.code as string;
             const coupon = await couponService.getCouponByCode(code);
 
             if (!coupon) {
@@ -72,7 +72,7 @@ export const couponController = {
     // Update coupon
     updateCoupon: async (req: Request, res: Response) => {
         try {
-            const { id } = req.params;
+            const id = req.params.id as string;
             const updateDto: UpdateCouponDto = req.body;
             const coupon = await couponService.updateCoupon(id, updateDto);
             res.json({ success: true, data: coupon });
@@ -89,7 +89,7 @@ export const couponController = {
     // Delete coupon
     deleteCoupon: async (req: Request, res: Response) => {
         try {
-            const { id } = req.params;
+            const id = req.params.id as string;
             await couponService.deleteCoupon(id);
             res.json({ success: true, message: 'Coupon deleted successfully' });
         } catch (error) {
@@ -105,7 +105,7 @@ export const couponController = {
     // Update coupon status
     updateCouponStatus: async (req: Request, res: Response) => {
         try {
-            const { id } = req.params;
+            const id = req.params.id as string;
             const { isActive } = req.body;
 
             if (typeof isActive !== 'boolean') {

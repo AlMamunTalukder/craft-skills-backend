@@ -32,7 +32,7 @@ const createUser = catchAsync(async (req: Request, res: Response): Promise<void>
 });
 
 const updateUser = catchAsync(async (req: Request, res: Response): Promise<void> => {
-    const userId = req.params.id;
+    const userId = req.params.id as string;
     const result = await userService.updateUser(userId, req.body);
     sendResponse(res, {
         statusCode: 200,
@@ -66,7 +66,7 @@ const getAllUsers = catchAsync(async (req: Request, res: Response): Promise<void
 });
 
 const getUserById = catchAsync(async (req: Request, res: Response): Promise<void> => {
-    const { id } = req.params;
+    const id = req.params.id as string;
     const result = await userService.getUserById(id);
 
     sendResponse(res, {
@@ -78,12 +78,12 @@ const getUserById = catchAsync(async (req: Request, res: Response): Promise<void
 });
 
 const deleteUser = catchAsync(async (req: Request, res: Response): Promise<void> => {
-    const { id } = req.params;
+    const id = req.params.id as string;
     await userService.deleteUser(id);
 });
 
 const updateUserStatus = catchAsync(async (req: Request, res: Response): Promise<void> => {
-    const { id } = req.params;
+    const id = req.params.id as string;
     const { status } = req.body;
 
     if (!status || !['active', 'inactive', 'banned'].includes(status)) {
@@ -100,7 +100,7 @@ const updateUserStatus = catchAsync(async (req: Request, res: Response): Promise
 });
 
 const resetUserPassword = catchAsync(async (req: Request, res: Response): Promise<void> => {
-    const { id } = req.params;
+    const id = req.params.id as string;
     const { password } = req.body;
 
     await userService.resetUserPassword(id, password);

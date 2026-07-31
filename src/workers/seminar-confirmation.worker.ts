@@ -68,7 +68,7 @@ new Worker(
         } catch (error: any) {
             await session.abortTransaction();
             session.endSession();
-            logger.error(`Error processing job ${job.id}: ${error.message}`, { error });
+            logger.error({ error }, `Error processing job ${job.id}: ${error.message}`);
             throw error;
         }
     },

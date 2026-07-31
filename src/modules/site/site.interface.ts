@@ -2,7 +2,7 @@ import type { Document } from 'mongoose';
 import type { ObjectId } from 'mongodb';
 
 export interface ISite extends Document {
-    _id: string | ObjectId;
+    
     name: string;
     logoHeader: string;
     logoFooter: string;

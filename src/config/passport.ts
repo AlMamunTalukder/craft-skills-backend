@@ -24,6 +24,10 @@ passport.use(
                 return done(null, false, { message: 'Incorrect email or phone number.' });
             }
 
+            if (user.status !== 'active') {
+                return done(null, false, { message: 'This account is not active.' });
+            }
+
             if (website === 'admin' && !['admin', 'teacher'].includes(user.role)) {
                 return done(null, false, { message: 'Access denied for admin panel' });
             }
@@ -34,12 +38,30 @@ passport.use(
 );
 
 passport.serializeUser((user, done) => {
-    done(null, (user as IUser)._id);
+    const authenticatedUser = user as IUser;
+    done(null, {
+        id: authenticatedUser._id.toString(),
+        sessionVersion: (authenticatedUser as any).sessionVersion || 0,
+    });
 });
 
 passport.deserializeUser(async (id, done) => {
     try {
-        const user = await User.findById(id);
+        const session =
+            typeof id === 'object' && id !== null
+                ? (id as { id: string; sessionVersion?: number })
+                : { id: String(id) };
+        const user = await User.findById(session.id);
+
+        if (
+            !user ||
+            user.status !== 'active' ||
+            session.sessionVersion === undefined ||
+            user.sessionVersion !== session.sessionVersion
+        ) {
+            return done(null, false);
+        }
+
         done(null, user);
     } catch (error) {
         done(error);

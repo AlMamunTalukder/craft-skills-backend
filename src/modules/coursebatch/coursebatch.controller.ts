@@ -7,7 +7,7 @@ import validateRequest from 'src/utils/validateRequest';
 export const courseBatchController = {
     checkBatchExists: async (req: Request, res: Response) => {
         try {
-            const { batchNumber } = req.params;
+            const batchNumber = req.params.batchNumber as string;
             const batchExists = await courseBatchService.checkBatchExists(batchNumber);
 
             res.json({
@@ -40,7 +40,7 @@ export const courseBatchController = {
 
     getBatchById: async (req: Request, res: Response) => {
         try {
-            const batch = await courseBatchService.getBatchById(req.params.id);
+            const batch = await courseBatchService.getBatchById(String(req.params.id));
             res.json({
                 success: true,
                 message: 'Batch retrieved successfully',
@@ -97,7 +97,7 @@ export const courseBatchController = {
                     updateData.registrationEnd = new Date(registrationEnd);
                 }
 
-                const batch = await courseBatchService.updateBatch(req.params.id, updateData);
+                const batch = await courseBatchService.updateBatch(String(req.params.id), updateData);
                 res.json({
                     success: true,
                     message: 'Batch updated successfully',
@@ -114,7 +114,7 @@ export const courseBatchController = {
 
     deleteBatch: async (req: Request, res: Response) => {
         try {
-            await courseBatchService.deleteBatch(req.params.id);
+            await courseBatchService.deleteBatch(String(req.params.id));
             res.json({
                 success: true,
                 message: 'Batch deleted successfully',
@@ -130,7 +130,7 @@ export const courseBatchController = {
     changeStatus: async (req: Request, res: Response) => {
         try {
             const { isActive } = req.body;
-            const batch = await courseBatchService.changeStatus(req.params.id, isActive);
+            const batch = await courseBatchService.changeStatus(String(req.params.id), isActive);
             res.json({
                 success: true,
                 message: 'Batch status updated successfully',

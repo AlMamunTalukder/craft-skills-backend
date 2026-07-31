@@ -1,7 +1,7 @@
 // server/dto/coupon.dto.ts
 import { z } from 'zod';
 
-export const createCouponDto = z
+export const createCouponBaseSchema = z
     .object({
         code: z.string().min(3, 'Coupon code must be at least 3 characters').max(50),
         discountType: z.enum(['PERCENTAGE', 'AMOUNT']),
@@ -14,7 +14,9 @@ export const createCouponDto = z
             message: 'Valid to must be in format YYYY-MM-DDTHH:mm (BD time)',
         }),
         maxUsage: z.coerce.number().min(1).optional(),
-    })
+    });
+
+export const createCouponDto = createCouponBaseSchema
     .refine(
         (data) => {
             if (data.discountType === 'PERCENTAGE') {
@@ -39,7 +41,7 @@ export const createCouponDto = z
         },
     );
 
-export const updateCouponDto = createCouponDto.partial();
+export const updateCouponDto = createCouponBaseSchema.partial();
 
 export type CreateCouponDto = z.infer<typeof createCouponDto>;
 export type UpdateCouponDto = z.infer<typeof updateCouponDto>;

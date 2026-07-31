@@ -15,7 +15,7 @@ redisClient.on('ready', () => {
 });
 
 redisClient.on('error', (err) => {
-    logger.error('Redis Client Error', err);
+    logger.error(err, 'Redis Client Error');
 });
 
 redisClient.on('reconnecting', () => {
@@ -36,7 +36,7 @@ export default redisClient;
 //     url: config.redisHost,
 // });
 
-// redisClient.on('error', (err) => logger.error('Redis Client Error', err));
+// redisClient.on('error', (err) => logger.error(err, 'Redis Client Error'));
 
 // export const connectRedis = async (): Promise<void> => {
 //     await redisClient.connect();

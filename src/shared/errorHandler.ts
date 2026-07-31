@@ -10,23 +10,27 @@ const errorHandler: ErrorRequestHandler = (
     res: Response,
     _next: NextFunction,
 ) => {
-    const statusCode = httpStatus.INTERNAL_SERVER_ERROR;
+    let statusCode = err?.statusCode || httpStatus.INTERNAL_SERVER_ERROR;
     const success = false;
     let message = err.message || 'Something went wrong!';
     let errors = err as any;
 
     if (err instanceof ZodError) {
+        statusCode = httpStatus.BAD_REQUEST;
         message = 'Please provide valid data!';
         errors = handleZodError(err);
     } else if (err.code === 11000) {
+        statusCode = httpStatus.CONFLICT;
         message = 'Duplicate field value entered';
         errors = {
             [Object.keys(err.keyValue)[0]]: `${Object.keys(err.keyValue)[0]} already exists`,
         };
     } else if (err?.name === 'ValidationError') {
+        statusCode = httpStatus.BAD_REQUEST;
         message = 'Please provide valid data!';
         errors = err.errors;
     } else if (err?.name === 'CastError') {
+        statusCode = httpStatus.NOT_FOUND;
         message = `Resource not found with id of ${err.value}`;
         errors = {};
     }

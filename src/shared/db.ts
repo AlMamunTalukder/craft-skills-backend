@@ -9,11 +9,12 @@ const connectDB = async (): Promise<void> => {
             minPoolSize: 10,
             socketTimeoutMS: 45000,
             serverSelectionTimeoutMS: 5000,
+            tls: true,
         });
 
         logger.info('MongoDB connected successfully with connection pool (max 100)');
     } catch (error) {
-        logger.error('Failed to connect MongoDB', error);
+        logger.error(error, 'Failed to connect MongoDB');
         process.exit(1);
     }
 };
@@ -29,7 +30,7 @@ export default connectDB;
 //         await mongoose.connect(config.databaseUrl as string);
 //         logger.info('MongoDB connected successfully');
 //     } catch (error) {
-//         logger.error('Failed to connect to MongoDB', error);
+//         logger.error(error, 'Failed to connect to MongoDB');
 //         process.exit(1);
 //     }
 // };

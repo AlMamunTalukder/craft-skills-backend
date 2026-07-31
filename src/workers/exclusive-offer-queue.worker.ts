@@ -27,10 +27,10 @@ interface IBatch {
 new Worker(
     'exclusive-offer-queue',
     async (job) => {
-        logger.info('🔁 Worker started for job', { jobId: job.id });
+        logger.info({ jobId: job.id }, '🔁 Worker started for job');
 
         const { participantData } = job.data;
-        logger.info('📦 Received participantData', participantData);
+        logger.info(participantData, '📦 Received participantData');
 
         const cleanPhone = sanitizePhoneNumber(participantData.phone) || participantData.phone;
 
@@ -61,7 +61,7 @@ new Worker(
             await session.commitTransaction();
             session.endSession();
 
-            logger.info('💾 Participant saved/updated', { participantId: participant._id });
+            logger.info({ participantId: participant._id }, '💾 Participant saved/updated');
 
             // ============================
             // FETCH BATCH INFORMATION FOR SHEET NAME
@@ -84,10 +84,10 @@ new Worker(
                         logger.warn(`⚠️ Batch not found for ID: ${participantData.batchId}`);
                     }
                 } catch (error: any) {
-                    logger.warn('⚠️ Could not fetch batch info', {
+                    logger.warn({
                         batchId: participantData.batchId,
                         error: error?.message || 'Unknown error',
-                    });
+                    }, '⚠️ Could not fetch batch info');
                 }
             }
 
@@ -167,10 +167,10 @@ new Worker(
 // new Worker(
 //     'exclusive-offer-queue',
 //     async (job) => {
-//         logger.info('🔁 Worker started for job', { jobId: job.id });
+//         logger.info({ jobId: job.id }, '🔁 Worker started for job');
 
 //         const { participantData } = job.data;
-//         logger.info('📦 Received participantData', participantData);
+//         logger.info(participantData, '📦 Received participantData');
 
 //         const cleanPhone = sanitizePhoneNumber(participantData.phone) || participantData.phone;
 
@@ -201,7 +201,7 @@ new Worker(
 //             await session.commitTransaction();
 //             session.endSession();
 
-//             logger.info('💾 Participant saved/updated', { participantId: participant._id });
+//             logger.info({ participantId: participant._id }, '💾 Participant saved/updated');
 
 //             // ============================
 //             // GOOGLE SHEET

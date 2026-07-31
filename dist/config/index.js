@@ -40,11 +40,15 @@ const dotenv = __importStar(require("dotenv"));
 const path_1 = __importDefault(require("path"));
 dotenv.config({ path: path_1.default.join(process.cwd(), '.env') });
 const isProduction = process.env.NODE_ENV === 'production';
+const sessionSecret = process.env.SESSION_SECRET;
+if (isProduction && (!sessionSecret || sessionSecret.length < 32)) {
+    throw new Error('SESSION_SECRET must be set to at least 32 characters in production');
+}
 exports.default = {
     port: process.env.PORT || 5000,
     databaseUrl: process.env.DATABASE_URL || 'mongodb://localhost:27017/craft-skills',
-    sessionSecret: process.env.SESSION_SECRET || 'default-secret',
-    env: process.env.NODE_ENV || 'production',
+    sessionSecret: sessionSecret || 'development-only-session-secret',
+    env: process.env.NODE_ENV || 'development',
     redisHost: process.env.REDIS_HOST || 'redis://localhost:6379',
     // Cloudinary
     CLOUDINARY_CLOUD_NAME: process.env.CLOUDINARY_CLOUD_NAME || '',
@@ -78,7 +82,7 @@ exports.default = {
     cookieSettings: {
         httpOnly: true,
         secure: isProduction, // true in production, false in development
-        sameSite: isProduction ? 'none' : 'lax', // 'none' for cross-domain in production
+        sameSite: 'lax',
         domain: isProduction ? '.craftskillsbd.com' : undefined, // Allow all subdomains
         maxAge: 24 * 60 * 60 * 1000, // 24 hours
         path: '/',

@@ -6,7 +6,7 @@ Object.defineProperty(exports, "__esModule", { value: true });
 const logger_1 = __importDefault(require("./logger"));
 const setupGlobalErrorHandlers = () => {
     process.on('uncaughtException', (error) => {
-        logger_1.default.error('Uncaught Exception:', error);
+        logger_1.default.error(error, 'Uncaught Exception:');
         process.exit(1);
     });
     process.on('unhandledRejection', (reason) => {
@@ -18,7 +18,7 @@ const setupGlobalErrorHandlers = () => {
         process.exit(1);
     });
     // process.on('unhandledRejection', (reason, promise) => {
-    //     logger.error('Unhandled Rejection at:', promise, 'reason:', reason);
+    //     logger.error(promise, 'reason:', reason, 'Unhandled Rejection at:');
     //     process.exit(1);
     // });
 };

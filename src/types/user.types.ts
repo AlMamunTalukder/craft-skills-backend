@@ -42,6 +42,8 @@ export interface AuthUser {
     batchNumber: string;
     batchId?: Types.ObjectId;
     admissionId?: Types.ObjectId;
+    batchIds?: Types.ObjectId[];
+    admissionIds?: Types.ObjectId[];
     createdAt?: Date;
     updatedAt?: Date;
 }

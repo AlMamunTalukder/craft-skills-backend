@@ -13,7 +13,7 @@ const getSiteData = async (): Promise<ISite | null> => {
             return JSON.parse(cachedData) as ISite;
         }
     } catch (err) {
-        logger.warn('Redis get error, falling back to MongoDB', err);
+        logger.warn(err, 'Redis get error, falling back to MongoDB');
     }
 
     const siteData = await Site.findOne().lean();
@@ -21,7 +21,7 @@ const getSiteData = async (): Promise<ISite | null> => {
         try {
             await redisClient.set(CACHE_KEY, JSON.stringify(siteData));
         } catch (err) {
-            logger.warn('Redis set error', err);
+            logger.warn(err, 'Redis set error');
         }
     }
     return siteData as ISite | null;

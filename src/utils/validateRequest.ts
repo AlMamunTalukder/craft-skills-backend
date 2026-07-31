@@ -4,7 +4,7 @@ import { ZodTypeAny } from 'zod';
 const validateRequest =
     (schema: ZodTypeAny) => async (req: Request, res: Response, next: NextFunction) => {
         try {
-            await schema.parseAsync(req.body ? req.body : {});
+            req.body = await schema.parseAsync(req.body ? req.body : {});
             return next();
         } catch (err) {
             next(err);

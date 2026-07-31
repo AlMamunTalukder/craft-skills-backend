@@ -12,11 +12,13 @@ export function auth(roles: string[] = []) {
         }
 
         const user = req.user as IUser;
+        if (!user || user.status !== 'active') {
+            return res.status(401).json({ message: 'Authentication required' });
+        }
+
         if (!roles.includes(user.role)) {
             return res.status(403).json({
                 message: 'Access denied: insufficient role',
-                userRole: user.role,
-                requiredRoles: roles,
             });
         }
 

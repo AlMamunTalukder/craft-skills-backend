@@ -2,7 +2,7 @@ import logger from './logger';
 
 const setupGlobalErrorHandlers = (): void => {
     process.on('uncaughtException', (error) => {
-        logger.error('Uncaught Exception:', error);
+        logger.error(error, 'Uncaught Exception:');
         process.exit(1);
     });
 
@@ -18,7 +18,7 @@ const setupGlobalErrorHandlers = (): void => {
     });
 
     // process.on('unhandledRejection', (reason, promise) => {
-    //     logger.error('Unhandled Rejection at:', promise, 'reason:', reason);
+    //     logger.error(promise, 'reason:', reason, 'Unhandled Rejection at:');
     //     process.exit(1);
     // });
 };

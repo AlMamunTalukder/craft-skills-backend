@@ -473,7 +473,7 @@ const verifyPayment = catchAsync(async (req, res) => {
 
 // ✅ GET single participant
 const getParticipantById = catchAsync(async (req, res) => {
-    const { id } = req.params;
+    const id = req.params.id as string;
     const participant = await ExclusiveOfferParticipant.findById(id);
     if (!participant) {
         return sendResponse(res, {
@@ -523,7 +523,7 @@ const createParticipant = catchAsync(async (req, res) => {
 
 // ✅ UPDATE participant - Handle batch change
 const updateParticipant = catchAsync(async (req, res) => {
-    const { id } = req.params;
+    const id = req.params.id as string;
 
     // Get the existing participant to check if batch changed
     const existingParticipant = await ExclusiveOfferParticipant.findById(id);
@@ -598,7 +598,7 @@ const getParticipants = catchAsync(async (req, res) => {
 
 // ✅ DELETE participant - Also remove from batch
 const deleteParticipant = catchAsync(async (req, res) => {
-    const { id } = req.params;
+    const id = req.params.id as string;
 
     // Get the participant first to get batchId
     const participant = await ExclusiveOfferParticipant.findById(id);
@@ -729,7 +729,7 @@ export const exclusiveOfferController = {
 
 // // ✅ GET single participant
 // const getParticipantById = catchAsync(async (req, res) => {
-//     const { id } = req.params;
+//     const id = req.params.id as string;
 //     const participant = await ExclusiveOfferParticipant.findById(id);
 //     if (!participant) {
 //         return sendResponse(res, {
@@ -771,7 +771,7 @@ export const exclusiveOfferController = {
 
 // // ✅ UPDATE participant
 // const updateParticipant = catchAsync(async (req, res) => {
-//     const { id } = req.params;
+//     const id = req.params.id as string;
 //     const participant = await ExclusiveOfferParticipant.findByIdAndUpdate(id, req.body, {
 //         new: true,
 //         runValidators: true,
@@ -794,7 +794,7 @@ export const exclusiveOfferController = {
 
 // // ✅ DELETE participant
 // const deleteParticipant = catchAsync(async (req, res) => {
-//     const { id } = req.params;
+//     const id = req.params.id as string;
 //     const participant = await ExclusiveOfferParticipant.findByIdAndDelete(id);
 //     if (!participant) {
 //         return sendResponse(res, {

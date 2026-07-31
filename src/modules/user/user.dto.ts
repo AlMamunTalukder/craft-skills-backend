@@ -2,7 +2,7 @@
 import z from 'zod';
 import { phoneRegex } from '../auth/auth.dto';
 
-export const createUserDto = z
+export const createUserBaseSchema = z
     .object({
         name: z
             .string({})
@@ -30,7 +30,9 @@ export const createUserDto = z
             .or(z.literal('')),
 
         role: z.enum(['student', 'admin', 'teacher']).optional(),
-    })
+    });
+
+export const createUserDto = createUserBaseSchema
     .refine((data) => data.email || data.phone, {
         message: 'Either email or phone number must be provided',
         path: ['email'],
@@ -47,7 +49,7 @@ export const createUserDto = z
         },
     );
 
-export const updateUserDto = createUserDto.partial().extend({
+export const updateUserDto = createUserBaseSchema.partial().extend({
     status: z.enum(['active', 'inactive', 'banned']).optional(),
     role: z.enum(['student', 'admin', 'teacher']).optional(),
     image: z.string().url('Invalid image URL').optional(),

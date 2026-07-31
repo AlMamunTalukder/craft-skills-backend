@@ -20,7 +20,7 @@ export const admissionController = {
     }),
 
     getAdmissionById: catchAsync(async (req: Request, res: Response) => {
-        const { id } = req.params;
+        const id = req.params.id as string;
         const admission = await admissionService.getAdmissionById(id);
 
         res.status(200).json({
@@ -31,7 +31,7 @@ export const admissionController = {
     }),
 
     getAdmissionsByBatchId: catchAsync(async (req: Request, res: Response) => {
-        const { batchId } = req.params;
+        const batchId = req.params.batchId as string;
         const admissions = await admissionService.getAdmissionsByBatchId(batchId);
 
         res.status(200).json({
@@ -55,7 +55,7 @@ export const admissionController = {
     }),
 
     updateAdmission: catchAsync(async (req: Request, res: Response) => {
-        const { id } = req.params;
+        const id = req.params.id as string;
         const admission = await admissionService.updateAdmission(id, req.body);
 
         res.status(200).json({
@@ -66,7 +66,7 @@ export const admissionController = {
     }),
 
     deleteAdmission: catchAsync(async (req: Request, res: Response) => {
-        const { id } = req.params;
+        const id = req.params.id as string;
         await admissionService.deleteAdmission(id);
 
         res.status(200).json({
@@ -76,7 +76,7 @@ export const admissionController = {
     }),
 
     updateStatus: catchAsync(async (req: Request, res: Response) => {
-        const { id } = req.params;
+        const id = req.params.id as string;
         const { status } = req.body;
         const admission = await admissionService.updateAdmissionStatus(id, status);
 
@@ -88,7 +88,7 @@ export const admissionController = {
     }),
 
     updatePaymentStatus: catchAsync(async (req: Request, res: Response) => {
-        const { id } = req.params;
+        const id = req.params.id as string;
         const { paymentStatus } = req.body;
         const admission = await admissionService.updatePaymentStatus(id, paymentStatus);
 
@@ -100,7 +100,7 @@ export const admissionController = {
     }),
 
     updateAdmissionResult: catchAsync(async (req: Request, res: Response): Promise<void> => {
-        const { id } = req.params;
+        const id = req.params.id as string;
         const { result } = req.body;
 
         // console.log(`Updating result for admission ID ${id} to ${result}`);

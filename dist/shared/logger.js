@@ -3,20 +3,36 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-const winston_1 = __importDefault(require("winston"));
+const pino_1 = __importDefault(require("pino"));
 const path_1 = __importDefault(require("path"));
-const logger = winston_1.default.createLogger({
+const logger = (0, pino_1.default)({
     level: 'info',
-    format: winston_1.default.format.json(),
-    transports: [
-        new winston_1.default.transports.Console(),
-        new winston_1.default.transports.File({
-            filename: path_1.default.join(process.cwd(), 'logs', 'error.log'),
-            level: 'error',
-        }),
-        new winston_1.default.transports.File({
-            filename: path_1.default.join(process.cwd(), 'logs', 'combined.log'),
-        }),
-    ],
+    transport: {
+        targets: [
+            {
+                target: 'pino-pretty',
+                options: {
+                    colorize: true,
+                },
+                level: 'info',
+            },
+            {
+                target: 'pino/file',
+                options: {
+                    destination: path_1.default.join(process.cwd(), 'logs', 'error.log'),
+                    mkdir: true,
+                },
+                level: 'error',
+            },
+            {
+                target: 'pino/file',
+                options: {
+                    destination: path_1.default.join(process.cwd(), 'logs', 'combined.log'),
+                    mkdir: true,
+                },
+                level: 'info',
+            },
+        ],
+    },
 });
 exports.default = logger;

@@ -23,7 +23,7 @@ export const getAllSchedules = async (_req: Request, res: Response) => {
 // Get single schedule by ID
 export const getScheduleById = async (req: Request, res: Response) => {
     try {
-        const { id } = req.params;
+        const id = req.params.id as string;
         const schedule = await Schedule.findById(id);
 
         if (!schedule) {
@@ -82,7 +82,7 @@ export const createSchedule = async (req: Request, res: Response) => {
 export const updateSchedule = async (req: Request, res: Response) => {
     try {
         const { weekNumber, holidays, schedules } = req.body;
-        const { id } = req.params; // Could be undefined if using old route
+        const id = req.params.id as string; // Could be undefined if using old route
 
         let scheduleDoc;
 
@@ -131,7 +131,7 @@ export const updateSchedule = async (req: Request, res: Response) => {
 
 export const updateScheduleStatus = async (req: Request, res: Response) => {
     try {
-        const { id } = req.params;
+        const id = req.params.id as string;
         const { isActive } = req.body;
 
         // If we are setting this one to active, turn ALL others off first
@@ -154,7 +154,7 @@ export const updateScheduleStatus = async (req: Request, res: Response) => {
 // Delete schedule
 export const deleteSchedule = async (req: Request, res: Response) => {
     try {
-        const { id } = req.params;
+        const id = req.params.id as string;
         const schedule = await Schedule.findByIdAndDelete(id);
 
         if (!schedule) {

@@ -95,7 +95,7 @@ new Worker(
             await session.abortTransaction();
             session.endSession();
 
-            logger.error(`Error in admission worker: ${error.message}`, { error });
+            logger.error({ error }, `Error in admission worker: ${error.message}`);
 
             throw error;
         }

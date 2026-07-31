@@ -1,19 +1,35 @@
-import winston from 'winston';
+import pino from 'pino';
 import path from 'path';
 
-const logger = winston.createLogger({
+const logger = pino({
     level: 'info',
-    format: winston.format.json(),
-    transports: [
-        new winston.transports.Console(),
-        new winston.transports.File({
-            filename: path.join(process.cwd(), 'logs', 'error.log'),
-            level: 'error',
-        }),
-        new winston.transports.File({
-            filename: path.join(process.cwd(), 'logs', 'combined.log'),
-        }),
-    ],
+    transport: {
+        targets: [
+            {
+                target: 'pino-pretty',
+                options: {
+                    colorize: true,
+                },
+                level: 'info',
+            },
+            {
+                target: 'pino/file',
+                options: {
+                    destination: path.join(process.cwd(), 'logs', 'error.log'),
+                    mkdir: true,
+                },
+                level: 'error',
+            },
+            {
+                target: 'pino/file',
+                options: {
+                    destination: path.join(process.cwd(), 'logs', 'combined.log'),
+                    mkdir: true,
+                },
+                level: 'info',
+            },
+        ],
+    },
 });
 
 export default logger;

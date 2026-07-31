@@ -24,7 +24,7 @@ export const attendanceController = {
 
     // Get attendances by batch code
     getAttendancesByBatch: catchAsync(async (req: Request, res: Response): Promise<void> => {
-        const { batchCode } = req.params;
+        const batchCode = req.params.batchCode as string;
 
         const attendances = await Attendance.find({ batchId: batchCode })
             .populate('studentId', 'name email phone')
@@ -85,7 +85,7 @@ export const attendanceController = {
     // Get detailed batch attendance with students
     getBatchAttendanceDetails: catchAsync(async (req: Request, res: Response): Promise<void> => {
         try {
-            const { batchId } = req.params;
+            const batchId = req.params.batchId as string;
 
             // Get batch details
             const batch = await CourseBatch.findById(batchId).lean();
@@ -163,7 +163,7 @@ export const attendanceController = {
 
     // Get attendance statistics by batch
     getBatchStatistics: catchAsync(async (req: Request, res: Response): Promise<void> => {
-        const { batchCode } = req.params;
+        const batchCode = req.params.batchCode as string;
 
         const attendances = await Attendance.find({ batchId: batchCode }).lean();
 

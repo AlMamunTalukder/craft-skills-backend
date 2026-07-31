@@ -14,7 +14,7 @@ export enum IUserStatus {
 }
 
 export interface IUser extends Document {
-    _id: string | ObjectId;
+    
     name: string;
     email?: string;
     phone?: string;

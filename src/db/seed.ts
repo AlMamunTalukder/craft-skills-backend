@@ -31,7 +31,7 @@ const seed = async (): Promise<void> => {
         logger.info('Database seeding completed');
         process.exit(0);
     } catch (error: any) {
-        logger.error('Seeding error:', error);
+        logger.error(error, 'Seeding error:');
         throw new AppError(httpStatus.INTERNAL_SERVER_ERROR, 'Error while seeding the database');
     }
 };

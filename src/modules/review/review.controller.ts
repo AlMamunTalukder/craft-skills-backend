@@ -17,7 +17,7 @@ export const reviewController = {
 
     getReviewById: async (req: Request, res: Response) => {
         try {
-            const { id } = req.params;
+            const id = req.params.id as string;
             const review = await reviewService.getReviewById(id);
             res.json({ success: true, data: review });
         } catch (error) {
@@ -77,7 +77,7 @@ export const reviewController = {
 
     updateReview: async (req: Request, res: Response) => {
         try {
-            const { id } = req.params;
+            const id = req.params.id as string;
             const { title, isActive, image } = req.body;
 
             const updateData: any = {};
@@ -101,7 +101,7 @@ export const reviewController = {
 
     deleteReview: async (req: Request, res: Response) => {
         try {
-            const { id } = req.params;
+            const id = req.params.id as string;
             await reviewService.deleteReview(id);
             res.json({ success: true, message: 'Review deleted successfully' });
         } catch (error) {
@@ -116,7 +116,7 @@ export const reviewController = {
 
     updateReviewStatus: async (req: Request, res: Response) => {
         try {
-            const { id } = req.params;
+            const id = req.params.id as string;
             const { isActive } = req.body;
 
             if (typeof isActive !== 'boolean') {

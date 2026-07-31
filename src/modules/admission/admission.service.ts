@@ -53,7 +53,7 @@ export const queueAdmission = async (admissionData: any) => {
             status: 'queued',
         };
     } catch (error: any) {
-        logger.error('Error queueing admission:', error);
+        logger.error(error, 'Error queueing admission:');
         throw error;
     }
 };
