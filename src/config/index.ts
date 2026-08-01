@@ -53,8 +53,9 @@ export default {
     cookieSettings: {
         httpOnly: true,
         secure: isProduction, // true in production, false in development
-        sameSite: 'lax',
-        domain: isProduction ? '.craftskillsbd.com' : undefined, // Allow all subdomains
+        // sameSite: 'lax',  
+        sameSite: 'none',
+        domain: isProduction ? '.craftskillsbd.com' : undefined, 
         maxAge: 24 * 60 * 60 * 1000, // 24 hours
         path: '/',
     },

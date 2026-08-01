@@ -60,14 +60,25 @@ const sessionMiddleware = session({
     saveUninitialized: false,
     store: MongoStore.create({ mongoUrl: config.databaseUrl, ttl: 24 * 60 * 60 }),
     name: 'craftskills.session',
+
     cookie: {
         httpOnly: true,
-        secure: config.env === 'production',
-        sameSite: 'lax',
+        secure: true,
+        sameSite: 'none',
         maxAge: 24 * 60 * 60 * 1000,
-        domain: config.env === 'production' ? '.craftskillsbd.com' : undefined,
+        domain: '.craftskillsbd.com',
         path: '/',
     },
+
+
+    // cookie: {
+    //     httpOnly: true,
+    //     secure: config.env === 'production',
+    //     sameSite: 'lax',
+    //     maxAge: 24 * 60 * 60 * 1000,
+    //     domain: config.env === 'production' ? '.craftskillsbd.com' : undefined,
+    //     path: '/',
+    // },
     proxy: config.env === 'production',
 });
 
