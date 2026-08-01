@@ -57,8 +57,8 @@ passport.deserializeUser(async (id, done) => {
             !user ||
             user.status !== 'active' ||
             session.sessionVersion === undefined ||
-            //  user.sessionVersion !== session.sessionVersion
             ((user as any).sessionVersion ?? 0) !== session.sessionVersion
+            //  user.sessionVersion !== session.sessionVersion
         ) {
             return done(null, false);
         }
