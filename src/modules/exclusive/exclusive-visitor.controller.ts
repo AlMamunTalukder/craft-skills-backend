@@ -1,26 +1,7 @@
 import { Request, Response } from 'express';
-import { ExclusiveVisitor } from './exclusive-visitor.model';
-import { v4 as uuidv4 } from 'uuid';
 
-const getVisitorId = (req: Request, res: Response): string => {
-    // ✅ Check if cookie exists
-    let visitorId = req.cookies?.exclusive_visitor_id;
-
-    if (!visitorId) {
-        visitorId = uuidv4();
-        res.cookie('exclusive_visitor_id', visitorId, {
-            maxAge: 365 * 24 * 60 * 60 * 1000, // 1 year
-            httpOnly: true,
-            secure: process.env.NODE_ENV === 'production',
-            sameSite: 'lax',
-        });
-        console.log('🆕 New visitor cookie created:', visitorId);
-    } else {
-        console.log('🔁 Existing visitor cookie found:', visitorId);
-    }
-
-    return visitorId;
-};
+const COOKIE_NAME = 'exclusive_visitor_id';
+const COOKIE_MAX_AGE = 365 * 24 * 60 * 60 * 1000; // 1 year
 
 const STAGES = [
     { duration: 3 * 60 * 60 * 1000, label: '3 hours' }, // Stage 1: 3 hours
@@ -28,61 +9,72 @@ const STAGES = [
     { duration: 20 * 60 * 1000, label: '20 minutes' }, // Stage 3: 20 minutes
 ];
 
+// Cumulative end (ms) of each stage measured from first visit
+const STAGE_ENDS: number[] = [];
+let totalDuration = 0;
+for (const stage of STAGES) {
+    totalDuration += stage.duration;
+    STAGE_ENDS.push(totalDuration);
+}
+
+interface VisitorCookie {
+    v: number; // firstVisitAt (epoch ms)
+    r: boolean; // registered flag
+}
+
+const COOKIE_OPTIONS = {
+    maxAge: COOKIE_MAX_AGE,
+    httpOnly: true,
+    secure: process.env.NODE_ENV === 'production',
+    sameSite: 'lax' as const,
+};
+
+const readCookie = (req: Request): VisitorCookie | null => {
+    const raw = req.cookies?.[COOKIE_NAME];
+    if (!raw) return null;
+    try {
+        const parsed = JSON.parse(decodeURIComponent(raw));
+        if (typeof parsed?.v === 'number' && Number.isFinite(parsed.v)) {
+            return { v: parsed.v, r: parsed.r === true };
+        }
+    } catch {
+        // Malformed or legacy (uuid) cookie - treated as a new visitor
+    }
+    return null;
+};
+
+const writeCookie = (res: Response, data: VisitorCookie): void => {
+    res.cookie(COOKIE_NAME, encodeURIComponent(JSON.stringify(data)), COOKIE_OPTIONS);
+};
+
+// Used by payment success to hide the popup for registered users
+export const markVisitorRegistered = (req: Request, res: Response): void => {
+    const data = readCookie(req) || { v: Date.now(), r: false };
+    data.r = true;
+    writeCookie(res, data);
+};
+
 export const getVisitorStatus = async (req: Request, res: Response) => {
     try {
-        const visitorId = getVisitorId(req, res);
-        console.log('📋 Visitor ID from cookie:', visitorId);
+        const existing = readCookie(req);
+        const data = existing || { v: Date.now(), r: false };
+        if (!existing) writeCookie(res, data);
 
-        let visitor = await ExclusiveVisitor.findOne({ visitorId });
-        const now = new Date();
-
-        if (!visitor) {
-            // First visit: create with 3 hours
-            const expiryTime = new Date(now.getTime() + STAGES[0].duration);
-            visitor = await ExclusiveVisitor.create({
-                visitorId,
-                stage: 1,
-                expiryTime,
-                isBlocked: false,
-                registered: false,
-            });
-            console.log('🆕 New visitor created:', {
-                visitorId,
-                stage: 1,
-                expiryTime: expiryTime.toISOString(),
-            });
-            return res.json({
-                success: true,
-                status: 'active',
-                stage: 1,
-                expiryTime: expiryTime.toISOString(),
-                remainingMs: STAGES[0].duration,
-                isBlocked: false,
-                registered: false,
-                stageLabel: STAGES[0].label,
-            });
-        }
-
-        console.log('📊 Existing visitor found:', {
-            visitorId,
-            stage: visitor.stage,
-            expiryTime: visitor.expiryTime,
-            isBlocked: visitor.isBlocked,
-            registered: visitor.registered,
-        });
-
-        // Already registered
-        if (visitor.registered) {
+        // Already registered: hide the offer (matches previous behavior)
+        if (data.r) {
             return res.json({
                 success: true,
                 status: 'registered',
-                isBlocked: false,
                 registered: true,
+                isBlocked: false,
             });
         }
 
-        // Blocked
-        if (visitor.isBlocked) {
+        const now = Date.now();
+        const elapsed = now - data.v;
+
+        // Entire offer window elapsed → blocked
+        if (elapsed >= totalDuration) {
             return res.json({
                 success: true,
                 status: 'blocked',
@@ -92,64 +84,28 @@ export const getVisitorStatus = async (req: Request, res: Response) => {
             });
         }
 
-        // Check if expiry time has passed
-        const expiry = new Date(visitor.expiryTime);
-        if (now >= expiry) {
-            const nextStage = visitor.stage + 1;
-
-            if (nextStage > STAGES.length) {
-                visitor.isBlocked = true;
-                await visitor.save();
-                console.log('🚫 Visitor blocked after all stages:', visitorId);
-                return res.json({
-                    success: true,
-                    status: 'blocked',
-                    isBlocked: true,
-                    registered: false,
-                    message: 'Your time has expired. Please contact admin.',
-                });
+        // Determine current stage from elapsed time
+        let stage = 1;
+        let stageEndMs = STAGE_ENDS[0];
+        for (let i = 0; i < STAGE_ENDS.length; i++) {
+            if (elapsed < STAGE_ENDS[i]) {
+                stage = i + 1;
+                stageEndMs = STAGE_ENDS[i];
+                break;
             }
-
-            const newExpiry = new Date(now.getTime() + STAGES[nextStage - 1].duration);
-            visitor.stage = nextStage;
-            visitor.expiryTime = newExpiry;
-            await visitor.save();
-
-            console.log('⏭️ Moving to next stage:', {
-                visitorId,
-                newStage: nextStage,
-                newExpiry: newExpiry.toISOString(),
-            });
-
-            return res.json({
-                success: true,
-                status: 'active',
-                stage: nextStage,
-                expiryTime: newExpiry.toISOString(),
-                remainingMs: STAGES[nextStage - 1].duration,
-                isBlocked: false,
-                registered: false,
-                stageLabel: STAGES[nextStage - 1].label,
-            });
         }
 
-        // Still active - return remaining time
-        const remainingMs = expiry.getTime() - now.getTime();
-        console.log('⏱️ Remaining time:', {
-            visitorId,
-            remainingMs,
-            stage: visitor.stage,
-        });
+        const expiryTime = new Date(data.v + stageEndMs);
 
         return res.json({
             success: true,
             status: 'active',
-            stage: visitor.stage,
-            expiryTime: expiry.toISOString(),
-            remainingMs,
+            stage,
+            expiryTime: expiryTime.toISOString(),
+            remainingMs: Math.max(0, expiryTime.getTime() - now),
             isBlocked: false,
             registered: false,
-            stageLabel: STAGES[visitor.stage - 1].label,
+            stageLabel: STAGES[stage - 1].label,
         });
     } catch (error: any) {
         console.error('❌ Error in getVisitorStatus:', error);
@@ -159,16 +115,7 @@ export const getVisitorStatus = async (req: Request, res: Response) => {
 
 export const markAsRegistered = async (req: Request, res: Response) => {
     try {
-        const visitorId = getVisitorId(req, res);
-        console.log('✅ Marking visitor as registered:', visitorId);
-
-        const visitor = await ExclusiveVisitor.findOne({ visitorId });
-        if (!visitor) {
-            return res.status(404).json({ success: false, message: 'Visitor not found' });
-        }
-        visitor.registered = true;
-        visitor.isBlocked = false;
-        await visitor.save();
+        markVisitorRegistered(req, res);
         res.json({ success: true, message: 'Marked as registered' });
     } catch (error: any) {
         res.status(500).json({ success: false, message: error.message });

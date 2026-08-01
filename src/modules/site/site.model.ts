@@ -13,6 +13,7 @@ const siteSchema = new Schema<ISite>(
         facebook: { type: String },
         facebookGroup: { type: String },
         whatsapp: { type: String },
+        whatsappNumber: { type: String },
         youtube: { type: String },
         telegram: { type: String },
         instagram: { type: String },

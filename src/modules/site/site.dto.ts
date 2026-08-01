@@ -20,6 +20,7 @@ export const siteDto = z.object({
     facebook: z.string().url().optional(),
     facebookGroup: z.string().url().optional(),
     whatsapp: z.string().optional(),
+    whatsappNumber: z.string().optional(),
     youtube: z.string().url().optional(),
     telegram: z.string().url().optional(),
     instagram: z.string().url().optional(),

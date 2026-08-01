@@ -2,8 +2,8 @@ import catchAsync from 'src/utils/catchAsync';
 import sendResponse from 'src/utils/sendResponse';
 import { exclusiveOfferService } from './exclusive-offer.service';
 import { ExclusiveOfferParticipant } from './exclusive-offer.model';
-import { ExclusiveVisitor } from './exclusive-visitor.model';
 import { ExclusiveBatch } from './exclusive-batch.model';
+import { markVisitorRegistered } from './exclusive-visitor.controller';
 
 const FRONTEND_URL = 'https://craftskillsbd.com';
 
@@ -119,19 +119,11 @@ const paymentSuccess = async (req: any, res: any) => {
             console.warn('⚠️ Could not fetch updated record, using original');
         }
 
-        // ✅ STEP 7: Update visitor - never fatal
+        // ✅ STEP 7: Mark visitor as registered - stateless cookie (non-fatal)
         try {
-            const visitorId = extraData?.visitorId || participant.visitorId;
-            if (visitorId) {
-                await ExclusiveVisitor.findOneAndUpdate(
-                    { visitorId },
-                    { registered: true, isBlocked: false },
-                    { upsert: true },
-                );
-                console.log('✅ Visitor marked as registered');
-            }
+            markVisitorRegistered(req, res);
         } catch (visitorError) {
-            console.error('❌ Visitor update error (non-fatal):', visitorError);
+            console.error('❌ Visitor cookie error (non-fatal):', visitorError);
         }
 
         // ✅ STEP 8: Add participant to batch and update enrolled count
@@ -398,15 +390,6 @@ const ipn = async (req: any, res: any) => {
         if (!participant || !isSuccess) return;
 
         console.log('✅ IPN: DB updated for', tran_id);
-
-        // Update visitor
-        if (participant.visitorId) {
-            await ExclusiveVisitor.findOneAndUpdate(
-                { visitorId: participant.visitorId },
-                { registered: true, isBlocked: false },
-                { upsert: true },
-            ).catch((e: any) => console.error('Visitor update error:', e.message));
-        }
 
         // Queue Google Sheets
         await exclusiveOfferService

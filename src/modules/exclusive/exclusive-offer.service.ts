@@ -2,7 +2,6 @@ import AppError from 'src/errors/AppError';
 import SSLCommerzPayment from 'sslcommerz-lts';
 import config from 'src/config';
 import { sanitizePhoneNumber } from 'src/utils/phoneSanitizer';
-import { ExclusiveVisitor } from './exclusive-visitor.model';
 import { ExclusiveOfferParticipant } from './exclusive-offer.model';
 import { appendDataToGoogleSheet } from 'src/utils/googleSheets';
 import { exclusiveOfferQueue } from 'src/queues/exclusiveOffer.queue';
@@ -16,15 +15,7 @@ const registerParticipant = async (payload: any) => {
         const settings = await ExclusiveBatch.findById(payload.batchId);
         const price = settings?.offerPrice;
 
-        // 2. Check if visitor is blocked
-        if (payload.visitorId) {
-            const visitor = await ExclusiveVisitor.findOne({ visitorId: payload.visitorId });
-            if (visitor?.isBlocked) {
-                throw new AppError(403, 'Your time has expired. Please contact admin.');
-            }
-        }
-
-        // 3. Sanitize phone
+        // 2. Sanitize phone
         const cleanPhone = sanitizePhoneNumber(payload.phone) || payload.phone;
         const cleanWhatsapp = payload.whatsapp
             ? sanitizePhoneNumber(payload.whatsapp) || payload.whatsapp
