@@ -71,7 +71,6 @@ const ExclusiveBatchSchema = new Schema<IExclusiveBatch>(
     },
 );
 
-ExclusiveBatchSchema.index({ batchNo: 1 });
 ExclusiveBatchSchema.index({ isActive: 1 });
 ExclusiveBatchSchema.index({ date: 1 });
 

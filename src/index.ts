@@ -54,24 +54,6 @@ app.use(requestLogger);
 app.use(express.json({ limit: '50mb' }));
 app.use(express.urlencoded({ limit: '50mb', extended: true }));
 
-const sessionMiddleware = session({
-    secret: config.sessionSecret,
-    resave: false,
-    saveUninitialized: false,
-    store: MongoStore.create({ mongoUrl: config.databaseUrl, ttl: 24 * 60 * 60 }),
-    name: 'craftskills.session',
-    
-    cookie: {
-        httpOnly: true,
-        secure: config.env === 'production',
-        sameSite: 'lax',
-        maxAge: 24 * 60 * 60 * 1000,
-        domain: config.env === 'production' ? '.craftskillsbd.com' : undefined,
-        path: '/',
-    },
-    proxy: config.env === 'production',
-});
-
 const publicStaticPaths = [
     '/api/v1/site',
     '/api/v1/seminars/active',
@@ -82,47 +64,74 @@ const publicStaticPaths = [
     '/',
 ];
 
-app.use((req, res, next) => {
-    if (
-        req.method === 'GET' &&
-        publicStaticPaths.some((p) => req.path === p || req.path.startsWith(p + '?'))
-    ) {
-        return next();
-    }
-    sessionMiddleware(req, res, next);
-});
+const attachRoutes = (sessionMiddleware: ReturnType<typeof session>) => {
+    app.use(passport.initialize());
 
-app.use(passport.initialize());
-app.use(passport.session());
+    app.use((req, res, next) => {
+        if (
+            req.method === 'GET' &&
+            publicStaticPaths.some((p) => req.path === p || req.path.startsWith(p + '?'))
+        ) {
+            return next();
+        }
 
-app.use('/api/v1', routes);
+        sessionMiddleware(req, res, (err) => {
+            if (err) {
+                return next(err);
+            }
 
-app.get('/api/v1/debug/session', auth(['admin']), (req, res) => {
-    res.json({
-        sessionId: req.sessionID,
-        authenticated: req.isAuthenticated ? req.isAuthenticated() : false,
-        user: req.user || null,
-        cookie: req.headers.cookie,
-        env: config.env,
-        timestamp: new Date().toISOString(),
+            passport.session()(req, res, next);
+        });
     });
-});
 
-app.get('/', (req: Request, res: Response) => {
-    res.send('Hello, world!');
-});
+    app.use('/api/v1', routes);
 
-app.use('/health', (req: Request, res: Response) => {
-    res.status(200).send('OK');
-});
+    app.get('/api/v1/debug/session', auth(['admin']), (req, res) => {
+        res.json({
+            sessionId: req.sessionID,
+            authenticated: req.isAuthenticated ? req.isAuthenticated() : false,
+            user: req.user || null,
+            cookie: req.headers.cookie,
+            env: config.env,
+            timestamp: new Date().toISOString(),
+        });
+    });
 
-app.use(notFound);
+    app.get('/', (req: Request, res: Response) => {
+        res.send('Hello, world!');
+    });
 
-app.use(errorHandler);
+    app.use('/health', (req: Request, res: Response) => {
+        res.status(200).send('OK');
+    });
+
+    app.use(notFound);
+
+    app.use(errorHandler);
+};
 
 async function bootstrap(): Promise<void> {
-    await connectDB();
+    const normalizedUrl = await connectDB();
     await connectRedis();
+
+    const sessionMiddleware = session({
+        secret: config.sessionSecret,
+        resave: false,
+        saveUninitialized: false,
+        store: MongoStore.create({ mongoUrl: normalizedUrl, ttl: 24 * 60 * 60 }),
+        name: 'craftskills.session',
+        cookie: {
+            httpOnly: true,
+            secure: config.env === 'production',
+            sameSite: 'lax',
+            maxAge: 24 * 60 * 60 * 1000,
+            domain: config.env === 'production' ? '.craftskillsbd.com' : undefined,
+            path: '/',
+        },
+        proxy: config.env === 'production',
+    });
+
+    attachRoutes(sessionMiddleware);
 
     app.listen(config.port, () => {
         logger.info(`Server is running on port ${config.port}`);
