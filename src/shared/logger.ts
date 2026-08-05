@@ -1,17 +1,31 @@
 import pino from 'pino';
 import path from 'path';
 
+const isProd = process.env.NODE_ENV === 'production';
+
 const logger = pino({
     level: 'info',
     transport: {
         targets: [
-            {
-                target: 'pino-pretty',
-                options: {
-                    colorize: true,
-                },
-                level: 'info',
-            },
+            ...(isProd
+                ? [
+                      {
+                          target: 'pino/file',
+                          options: {
+                              destination: 1,
+                          },
+                          level: 'info',
+                      },
+                  ]
+                : [
+                      {
+                          target: 'pino-pretty',
+                          options: {
+                              colorize: true,
+                          },
+                          level: 'info',
+                      },
+                  ]),
             {
                 target: 'pino/file',
                 options: {
