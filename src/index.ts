@@ -6,6 +6,7 @@ import requestLogger from '@/shared/requestLogger';
 import errorHandler from '@/shared/errorHandler';
 import setupGlobalErrorHandlers from '@/shared/globalErrorHandlers';
 import connectDB from '@/shared/db';
+import mongoose from 'mongoose';
 import config from '@/config/index';
 import morgan from 'morgan';
 import cors from 'cors';
@@ -137,5 +138,32 @@ async function bootstrap(): Promise<void> {
         logger.info(`Server is running on port ${config.port}`);
     });
 }
+
+// Graceful shutdown — release connections so restarts don't leave sockets/jobs
+// dangling (prevents job re-processing and crash/restart loops).
+const shutdown = async (signal: string): Promise<void> => {
+    logger.info(`${signal} received, shutting down gracefully...`);
+
+    try {
+        const redisClient = (await import('@/config/redis')).default;
+        if (redisClient?.isOpen) {
+            await redisClient.quit();
+        }
+    } catch (error) {
+        logger.error(error as Error, 'Error closing Redis connection');
+    }
+
+    try {
+        await mongoose.disconnect();
+    } catch (error) {
+        logger.error(error as Error, 'Error closing MongoDB connection');
+    }
+
+    logger.info('Shutdown complete');
+    process.exit(0);
+};
+
+process.on('SIGTERM', () => void shutdown('SIGTERM'));
+process.on('SIGINT', () => void shutdown('SIGINT'));
 
 bootstrap();

@@ -1,4 +1,6 @@
-import { Request, Response } from 'express';
+import crypto from 'crypto';
+import type { Request, Response } from 'express';
+import config from 'src/config';
 
 const COOKIE_NAME = 'exclusive_visitor_id';
 const COOKIE_MAX_AGE = 365 * 24 * 60 * 60 * 1000; // 1 year
@@ -17,7 +19,7 @@ for (const stage of STAGES) {
     STAGE_ENDS.push(totalDuration);
 }
 
-interface VisitorCookie {
+interface VisitorData {
     v: number; // firstVisitAt (epoch ms)
     r: boolean; // registered flag
 }
@@ -29,22 +31,59 @@ const COOKIE_OPTIONS = {
     sameSite: 'lax' as const,
 };
 
-const readCookie = (req: Request): VisitorCookie | null => {
+// Same SESSION_SECRET already required (>= 32 chars) in production.
+// Used to HMAC-sign the cookie so visitors cannot tamper with the timer.
+const SIGN_KEY = config.sessionSecret || 'exclusive-visitor-signing-key';
+
+const signPayload = (payload: string): string =>
+    crypto.createHmac('sha256', SIGN_KEY).update(payload).digest('base64url');
+
+const encodeCookie = (data: VisitorData): string => {
+    const payload = Buffer.from(JSON.stringify(data), 'utf8').toString('base64url');
+    return `${payload}.${signPayload(payload)}`;
+};
+
+const safeEqual = (a: string, b: string): boolean => {
+    const aBuf = Buffer.from(a, 'utf8');
+    const bBuf = Buffer.from(b, 'utf8');
+    if (aBuf.length !== bBuf.length) return false;
+    return crypto.timingSafeEqual(aBuf, bBuf);
+};
+
+// Cookie format: `<base64url(payload)>.<hmacSignature>`.
+// Old plain-JSON cookies (legacy) fail signature check and are treated as new visitors.
+const readCookie = (req: Request): VisitorData | null => {
     const raw = req.cookies?.[COOKIE_NAME];
-    if (!raw) return null;
+    if (!raw || typeof raw !== 'string') return null;
+
+    const dot = raw.lastIndexOf('.');
+    if (dot <= 0 || dot === raw.length - 1) return null;
+
+    const payload = raw.slice(0, dot);
+    const signature = raw.slice(dot + 1);
+
+    // Tampered value => signature mismatch => rejected (fresh timer issued)
+    if (!safeEqual(signature, signPayload(payload))) return null;
+
     try {
-        const parsed = JSON.parse(decodeURIComponent(raw));
-        if (typeof parsed?.v === 'number' && Number.isFinite(parsed.v)) {
+        const parsed = JSON.parse(Buffer.from(payload, 'base64url').toString('utf8'));
+        const now = Date.now();
+        if (
+            typeof parsed?.v === 'number' &&
+            Number.isFinite(parsed.v) &&
+            parsed.v > 0 &&
+            parsed.v <= now + 5 * 60 * 1000 // sanity: no far-future timestamps
+        ) {
             return { v: parsed.v, r: parsed.r === true };
         }
     } catch {
-        // Malformed or legacy (uuid) cookie - treated as a new visitor
+        // Malformed value - treated as a new visitor
     }
     return null;
 };
 
-const writeCookie = (res: Response, data: VisitorCookie): void => {
-    res.cookie(COOKIE_NAME, encodeURIComponent(JSON.stringify(data)), COOKIE_OPTIONS);
+const writeCookie = (res: Response, data: VisitorData): void => {
+    res.cookie(COOKIE_NAME, encodeCookie(data), COOKIE_OPTIONS);
 };
 
 // Used by payment success to hide the popup for registered users
@@ -55,6 +94,7 @@ export const markVisitorRegistered = (req: Request, res: Response): void => {
 };
 
 export const getVisitorStatus = async (req: Request, res: Response) => {
+    res.set('Cache-Control', 'no-store');
     try {
         const existing = readCookie(req);
         const data = existing || { v: Date.now(), r: false };

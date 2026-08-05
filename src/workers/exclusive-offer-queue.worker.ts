@@ -139,8 +139,35 @@ new Worker(
                 participantData.addedByAdmin ? 'Yes' : 'No',
             ];
 
-            // Append to Google Sheet
-            await appendDataToGoogleSheet(sheetTitle, headers, rowData);
+            // ✅ IDEMPOTENCY: atomically claim this transaction for the sheet append.
+            // If a previous job already synced it (duplicate enqueue from ipn + payment
+            // success, or a BullMQ re-process), the DB stays single but the sheet append
+            // would duplicate. This claim makes the append run exactly once.
+            const claim = await ExclusiveOfferParticipant.updateOne(
+                { transactionId: participantData.transactionId, sheetSynced: { $ne: true } },
+                { $set: { sheetSynced: true } },
+            );
+
+            if (claim.modifiedCount === 0) {
+                logger.info(
+                    { transactionId: participantData.transactionId },
+                    '⏭️ Skipping Google Sheet append (already synced)',
+                );
+                return participant;
+            }
+
+            logger.info(`📤 Attempting to append to Google Sheet: ${sheetTitle}`);
+
+            try {
+                await appendDataToGoogleSheet(sheetTitle, headers, rowData);
+            } catch (error) {
+                // Release the claim so a retry can append the row
+                await ExclusiveOfferParticipant.updateOne(
+                    { transactionId: participantData.transactionId },
+                    { $set: { sheetSynced: false } },
+                ).catch(() => undefined);
+                throw error;
+            }
 
             logger.info(`✅ Google Sheet updated successfully: ${sheetTitle}`);
             return participant;

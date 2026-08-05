@@ -7,20 +7,14 @@ const setupGlobalErrorHandlers = (): void => {
     });
 
     process.on('unhandledRejection', (reason) => {
-        console.error('===========');
-        console.error(reason);
-
+        // Log and CONTINUE. Exiting here on transient errors (Redis/Mongo/queue
+        // flakiness) causes crash/restart loops under a process manager = CPU 100%.
         if (reason instanceof Error) {
-            console.error(reason.stack);
+            logger.error(reason, 'Unhandled Rejection:');
+        } else {
+            logger.error({ reason }, 'Unhandled Rejection:');
         }
-
-        process.exit(1);
     });
-
-    // process.on('unhandledRejection', (reason, promise) => {
-    //     logger.error(promise, 'reason:', reason, 'Unhandled Rejection at:');
-    //     process.exit(1);
-    // });
 };
 
 export default setupGlobalErrorHandlers;

@@ -23,12 +23,16 @@ const ExclusiveOfferParticipantSchema = new Schema<IExclusiveOfferParticipant>(
             ref: 'ExclusiveBatch',
             required: false,
         },
+        // ✅ Prevents duplicate Google Sheet rows per transaction
+        sheetSynced: { type: Boolean, default: false },
     },
     { timestamps: true, collection: 'exclusive_offer_participants' },
 );
 
 ExclusiveOfferParticipantSchema.index({ createdAt: -1 });
 ExclusiveOfferParticipantSchema.index({ batchId: 1 });
+ExclusiveOfferParticipantSchema.index({ transactionId: 1 }); // ✅ Kills collection scans on payment lookups
+ExclusiveOfferParticipantSchema.index({ sheetSynced: 1 });
 
 export const ExclusiveOfferParticipant =
     models.ExclusiveOfferParticipant ||

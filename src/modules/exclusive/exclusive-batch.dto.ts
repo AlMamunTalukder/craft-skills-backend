@@ -9,6 +9,7 @@ export const createExclusiveBatchDto = z.object({
     isActive: z.boolean().optional().default(true),
     offerPrice: z.number().default(199),
     regularPrice: z.number().default(5500),
+    whatsappGroupLink: z.string().url('Invalid WhatsApp group link').or(z.literal('')).optional(),
 });
 
 export const updateExclusiveBatchDto = createExclusiveBatchDto.partial();

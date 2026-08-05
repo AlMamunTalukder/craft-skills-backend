@@ -1,11 +1,12 @@
 import catchAsync from 'src/utils/catchAsync';
 import sendResponse from 'src/utils/sendResponse';
+import config from 'src/config';
 import { exclusiveOfferService } from './exclusive-offer.service';
 import { ExclusiveOfferParticipant } from './exclusive-offer.model';
 import { ExclusiveBatch } from './exclusive-batch.model';
 import { markVisitorRegistered } from './exclusive-visitor.controller';
 
-const FRONTEND_URL = 'https://craftskillsbd.com';
+const FRONTEND_URL = config.frontendUrl;
 
 const register = catchAsync(async (req, res) => {
     const result = await exclusiveOfferService.registerParticipant(req.body);
@@ -126,30 +127,10 @@ const paymentSuccess = async (req: any, res: any) => {
             console.error('❌ Visitor cookie error (non-fatal):', visitorError);
         }
 
-        // ✅ STEP 8: Add participant to batch and update enrolled count
-        try {
-            const batchId = participant.batchId || extraData?.batchId;
-            if (batchId) {
-                const batch = await ExclusiveBatch.findByIdAndUpdate(
-                    batchId,
-                    {
-                        $push: { participants: participant._id },
-                        $inc: { enrolledCount: 1 },
-                    },
-                    { new: true },
-                );
-                console.log('✅ Participant added to batch:', {
-                    batchId,
-                    batchTitle: batch?.title,
-                    enrolledCount: batch?.enrolledCount,
-                });
-            } else {
-                console.log('⚠️ No batchId found for participant, skipping batch update');
-            }
-        } catch (batchError) {
-            console.error('❌ Batch update error (non-fatal):', batchError);
-            // Continue anyway - don't block the user
-        }
+        // ✅ STEP 8: Batch updates are handled at registration/update flows.
+        // Avoid modifying batch participants here to prevent duplicate entries
+        // (registration already pushes participant into batch and increments count).
+        console.log('ℹ️ Skipping batch update in payment callback to avoid duplicates');
 
         // ✅ STEP 9: Queue for Google Sheets - never fatal
         try {
@@ -475,16 +456,27 @@ const getParticipantById = catchAsync(async (req, res) => {
 
 // ✅ CREATE participant (admin)
 const createParticipant = catchAsync(async (req, res) => {
-    const participant = await ExclusiveOfferParticipant.create({
-        ...req.body,
+    // Only allow admin-provided safe fields (DTO already validated)
+    const payload = {
+        name: req.body.name,
+        email: req.body.email || '',
+        phone: req.body.phone,
+        whatsapp: req.body.whatsapp || '',
+        occupation: req.body.occupation || '',
+        price: req.body.price || 199,
+        transactionId: req.body.transactionId || undefined,
+        visitorId: req.body.visitorId || '',
+        batchId: req.body.batchId || null,
         addedByAdmin: true,
         paymentStatus: 'success',
-        batchId: req.body.batchId,
-    });
+        paymentMethod: 'admin',
+    } as any;
+
+    const participant = await ExclusiveOfferParticipant.create(payload);
 
     // ✅ Also add this participant to the batch's participants array
-    if (req.body.batchId) {
-        await ExclusiveBatch.findByIdAndUpdate(req.body.batchId, {
+    if (participant.batchId) {
+        await ExclusiveBatch.findByIdAndUpdate(participant.batchId, {
             $push: { participants: participant._id },
             $inc: { enrolledCount: 1 }, // ✅ Increment enrolled count
         });
@@ -523,17 +515,19 @@ const updateParticipant = catchAsync(async (req, res) => {
     const newBatchId = req.body.batchId;
 
     // Update the participant
-    const participant = await ExclusiveOfferParticipant.findByIdAndUpdate(
-        id,
-        {
-            ...req.body,
-            batchId: newBatchId,
-        },
-        {
-            new: true,
-            runValidators: true,
-        },
-    );
+    // Only allow safe update fields from admin DTO
+    const updateData: any = {};
+    if (typeof req.body.name === 'string') updateData.name = req.body.name;
+    if (typeof req.body.email === 'string') updateData.email = req.body.email;
+    if (typeof req.body.phone === 'string') updateData.phone = req.body.phone;
+    if (typeof req.body.whatsapp === 'string') updateData.whatsapp = req.body.whatsapp;
+    if (typeof req.body.occupation === 'string') updateData.occupation = req.body.occupation;
+    updateData.batchId = newBatchId || null;
+
+    const participant = await ExclusiveOfferParticipant.findByIdAndUpdate(id, updateData, {
+        new: true,
+        runValidators: true,
+    });
 
     // ✅ Handle batch changes
     if (oldBatchId?.toString() !== newBatchId?.toString()) {
@@ -561,21 +555,47 @@ const updateParticipant = catchAsync(async (req, res) => {
     });
 });
 
-// ✅ GET participants - optionally filter by batchId
+// ✅ GET participants - optionally filter by batchId (paginated)
 const getParticipants = catchAsync(async (req, res) => {
-    const { batchId } = req.query;
+    const { batchId, page, limit, search } = req.query;
     const filter: any = {};
     if (batchId) {
         filter.batchId = batchId;
     }
-    const participants = await ExclusiveOfferParticipant.find(filter)
-        .sort({ createdAt: -1 })
-        .populate('batchId', 'batchNo title');
+
+    const pageNum = Math.max(1, parseInt(page as string, 10) || 1);
+    const limitNum = Math.min(100, Math.max(1, parseInt(limit as string, 10) || 20));
+    const skip = (pageNum - 1) * limitNum;
+
+    if (search) {
+        const s = String(search);
+        filter.$or = [
+            { name: { $regex: s, $options: 'i' } },
+            { phone: { $regex: s, $options: 'i' } },
+            { email: { $regex: s, $options: 'i' } },
+            { transactionId: { $regex: s, $options: 'i' } },
+        ];
+    }
+
+    const [participants, total] = await Promise.all([
+        ExclusiveOfferParticipant.find(filter)
+            .sort({ createdAt: -1 })
+            .skip(skip)
+            .limit(limitNum)
+            .populate('batchId', 'batchNo title'),
+        ExclusiveOfferParticipant.countDocuments(filter),
+    ]);
 
     sendResponse(res, {
         success: true,
         statusCode: 200,
         data: participants,
+        meta: {
+            total,
+            page: pageNum,
+            limit: limitNum,
+            totalPage: Math.ceil(total / limitNum),
+        },
     });
 });
 

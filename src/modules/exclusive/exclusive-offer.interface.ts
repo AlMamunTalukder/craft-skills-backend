@@ -14,6 +14,7 @@ export interface IExclusiveOfferParticipant extends Document {
     addedByAdmin?: boolean;
     visitorId?: string;
     batchId?: Types.ObjectId; // ✅ ADD THIS
+    sheetSynced?: boolean; // ✅ True once the Google Sheet append has completed
     createdAt: Date;
     updatedAt: Date;
 }

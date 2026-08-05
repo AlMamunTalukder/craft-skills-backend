@@ -6,8 +6,9 @@ import { ExclusiveOfferParticipant } from './exclusive-offer.model';
 import { appendDataToGoogleSheet } from 'src/utils/googleSheets';
 import { exclusiveOfferQueue } from 'src/queues/exclusiveOffer.queue';
 import { ExclusiveBatch } from './exclusive-batch.model';
+import redisClient from 'src/config/redis';
 
-const FRONTEND_URL = 'https://craftskillsbd.com';
+const FRONTEND_URL = config.frontendUrl;
 
 const registerParticipant = async (payload: any) => {
     try {
@@ -149,7 +150,24 @@ const sendToGoogleSheets = async (participant: any) => {
 };
 
 // ✅ Add job to queue for background processing
+// Deduplicated by transactionId so IPN + payment-success cannot enqueue twice.
 const addToQueue = async (participantData: any) => {
+    const tranId = participantData?.transactionId;
+    if (tranId && redisClient?.isReady) {
+        try {
+            const dedupeKey = `exclusive:sheet-enqueued:${tranId}`;
+            const claimed = await redisClient.set(dedupeKey, '1', {
+                NX: true,
+                EX: 48 * 60 * 60, // 48h — payments can't be revalidated beyond this
+            });
+            if (claimed !== 'OK') {
+                console.log(`⏭️ Skipping duplicate queue add for ${tranId}`);
+                return;
+            }
+        } catch (e) {
+            // Redis down → fall through; worker-level sheetSynced claim still dedupes
+        }
+    }
     await exclusiveOfferQueue.add('register', { participantData });
 };
 
