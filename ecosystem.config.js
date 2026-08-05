@@ -16,7 +16,7 @@ module.exports = {
         {
             name: 'craft-skills-backend',
             script: 'dist/index.js',
-            cwd: '/var/www/html/craft/skills/backend',
+            cwd: '/var/www/html/craft/skills/server',
             instances: 1,
             exec_mode: 'fork',
             autorestart: true,
