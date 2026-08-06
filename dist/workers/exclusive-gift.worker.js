@@ -11,7 +11,7 @@ const logger_1 = __importDefault(require("../shared/logger"));
 const exclusive_gift_model_1 = require("../modules/exclusive/exclusive-gift.model");
 const phoneSanitizer_1 = require("../utils/phoneSanitizer");
 new bullmq_1.Worker('exclusive-gift-queue', async (job) => {
-    const { giftData, batchTitle, batchNo } = job.data;
+    const { giftData, sheetBatchNo } = job.data;
     const cleanPhone = (0, phoneSanitizer_1.sanitizePhoneNumber)(giftData.phone) || giftData.phone;
     const cleanWhatsapp = (0, phoneSanitizer_1.sanitizePhoneNumber)(giftData.whatsapp) || giftData.whatsapp;
     logger_1.default.info(`Processing exclusive gift for: ${cleanPhone}`);
@@ -36,7 +36,7 @@ new bullmq_1.Worker('exclusive-gift-queue', async (job) => {
             minute: '2-digit',
             hour12: true,
         });
-        const sheetTitle = `Exclusive Gift - ${batchTitle} (Batch ${batchNo})`;
+        const sheetTitle = `Exclusive Gift Batch - ${sheetBatchNo ?? '1'}`;
         await (0, googleSheets_1.appendDataToGoogleSheet)(sheetTitle, ['Name', 'Phone', 'WhatsApp', 'Email', 'Occupation', 'Address', 'Confirmed At'], [
             gift.name || '',
             cleanPhone,

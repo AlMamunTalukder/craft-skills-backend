@@ -9,7 +9,7 @@ import { sanitizePhoneNumber } from 'src/utils/phoneSanitizer';
 new Worker(
     'exclusive-gift-queue',
     async (job) => {
-        const { giftData, batchTitle, batchNo } = job.data;
+        const { giftData, sheetBatchNo } = job.data;
 
         const cleanPhone = sanitizePhoneNumber(giftData.phone) || giftData.phone;
         const cleanWhatsapp = sanitizePhoneNumber(giftData.whatsapp) || giftData.whatsapp;
@@ -44,7 +44,7 @@ new Worker(
                 hour12: true,
             });
 
-            const sheetTitle = `Exclusive Gift - ${batchTitle} (Batch ${batchNo})`;
+            const sheetTitle = `Exclusive Gift Batch - ${sheetBatchNo ?? '1'}`;
 
             await appendDataToGoogleSheet(
                 sheetTitle,

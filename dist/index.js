@@ -58,6 +58,7 @@ require("./workers/participant.worker");
 require("./workers/admission.worker");
 require("./workers/seminar-confirmation.worker");
 require("./workers/exclusive-offer-queue.worker");
+require("./workers/exclusive-gift.worker");
 (0, globalErrorHandlers_1.default)();
 const app = (0, express_1.default)();
 if (index_2.default.env === 'production') {

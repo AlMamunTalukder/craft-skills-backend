@@ -21,6 +21,7 @@ import '@/workers/participant.worker';
 import '@/workers/admission.worker';
 import '@/workers/seminar-confirmation.worker';
 import '@/workers/exclusive-offer-queue.worker';
+import '@/workers/exclusive-gift.worker';
 
 setupGlobalErrorHandlers();
 

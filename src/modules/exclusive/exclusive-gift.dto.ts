@@ -7,7 +7,7 @@ export const exclusiveGiftDto = z.object({
     whatsapp: z.string().optional(),
     occupation: z.string().optional(),
     address: z.string().optional(),
-    batchId: z.string().min(1, 'Batch ID is required'),
+    batchId: z.string().min(1, 'Batch ID is required').optional(),
 });
 
 export type ExclusiveGiftDto = z.infer<typeof exclusiveGiftDto>;

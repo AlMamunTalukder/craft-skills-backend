@@ -10,20 +10,33 @@ const exclusive_gift_queue_1 = require("../../queues/exclusive-gift.queue");
 const confirmGift = async (data) => {
     try {
         const { batchId, ...giftData } = data;
-        // Validate batch exists
-        const batch = await exclusive_batch_model_1.ExclusiveBatch.findById(batchId);
-        if (!batch) {
-            throw new AppError_1.default(404, 'Batch not found');
+        // Validate batch exists if one was supplied
+        let batch = null;
+        if (batchId) {
+            batch = await exclusive_batch_model_1.ExclusiveBatch.findById(batchId);
+            if (!batch) {
+                throw new AppError_1.default(404, 'Batch not found');
+            }
         }
+        // Sheet name always uses the LAST batch number (highest batchNo),
+        // regardless of whether the batch is active or inactive.
+        const lastBatch = await exclusive_batch_model_1.ExclusiveBatch.findOne()
+            .sort({ batchNo: -1 })
+            .select('batchNo title');
+        const effectiveBatch = batch ?? lastBatch;
+        if (!effectiveBatch) {
+            throw new AppError_1.default(404, 'No batch found');
+        }
+        const sheetBatchNo = lastBatch?.batchNo ?? effectiveBatch.batchNo ?? '1';
         // Add job to queue for processing
         await exclusive_gift_queue_1.exclusiveGiftQueue.add('confirm-gift', {
             giftData: {
                 ...giftData,
-                batchId,
+                batchId: effectiveBatch._id.toString(),
                 confirmedAt: new Date(),
             },
-            batchTitle: batch.title,
-            batchNo: batch.batchNo,
+            batchTitle: effectiveBatch.title,
+            sheetBatchNo,
         });
         return {
             message: 'Gift confirmation received! You will receive your gift shortly.',

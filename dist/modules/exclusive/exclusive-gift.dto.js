@@ -9,5 +9,5 @@ exports.exclusiveGiftDto = zod_1.z.object({
     whatsapp: zod_1.z.string().optional(),
     occupation: zod_1.z.string().optional(),
     address: zod_1.z.string().optional(),
-    batchId: zod_1.z.string().min(1, 'Batch ID is required'),
+    batchId: zod_1.z.string().min(1, 'Batch ID is required').optional(),
 });
