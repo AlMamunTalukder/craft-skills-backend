@@ -12,5 +12,6 @@ exports.createExclusiveBatchDto = zod_1.z.object({
     offerPrice: zod_1.z.number().default(199),
     regularPrice: zod_1.z.number().default(5500),
     whatsappGroupLink: zod_1.z.string().url('Invalid WhatsApp group link').or(zod_1.z.literal('')).optional(),
+    giftDriveLink: zod_1.z.string().url('Invalid gift drive link').or(zod_1.z.literal('')).optional(),
 });
 exports.updateExclusiveBatchDto = exports.createExclusiveBatchDto.partial();

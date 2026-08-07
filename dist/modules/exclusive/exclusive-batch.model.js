@@ -41,6 +41,10 @@ const ExclusiveBatchSchema = new mongoose_1.Schema({
         type: String,
         trim: true,
     },
+    giftDriveLink: {
+        type: String,
+        trim: true,
+    },
     enrolledCount: {
         type: Number,
         default: 0,

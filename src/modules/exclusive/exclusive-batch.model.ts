@@ -11,6 +11,7 @@ export interface IExclusiveBatch extends Document {
     offerPrice: number;
     regularPrice: number;
     whatsappGroupLink?: string;
+    giftDriveLink?: string;
 
     enrolledCount: number;
     participants: Types.ObjectId[]; // ✅ Reference to participants
@@ -55,6 +56,10 @@ const ExclusiveBatchSchema = new Schema<IExclusiveBatch>(
             default: 5500,
         },
         whatsappGroupLink: {
+            type: String,
+            trim: true,
+        },
+        giftDriveLink: {
             type: String,
             trim: true,
         },
