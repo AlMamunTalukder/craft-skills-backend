@@ -133,10 +133,6 @@ const applyCoupon = async (code, totalAmount) => {
     // Ensure discount doesn't exceed total amount
     discountAmount = Math.min(discountAmount, totalAmount);
     const finalAmount = totalAmount - discountAmount;
-    // Increment used count
-    await coupon_model_1.Coupon.findByIdAndUpdate(coupon._id, {
-        $inc: { usedCount: 1 },
-    });
     return {
         isValid: true,
         discountAmount,
