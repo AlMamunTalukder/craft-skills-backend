@@ -19,7 +19,7 @@ router.post(
 );
 
 // GET routes – specific ones BEFORE dynamic
-router.get('/', seminarController.getAllSeminars);
+router.get('/', auth(['admin']), seminarController.getAllSeminars);
 router.get('/active', seminarController.getActiveSeminar);
 router.get('/pdf-seminar', seminarController.getPdfSeminar);
 

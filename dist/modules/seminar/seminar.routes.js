@@ -18,7 +18,7 @@ const router = (0, express_1.Router)();
 router.post('/register', (0, validateRequest_1.default)(seminar_dto_1.registerParticipantDto), participant_controller_1.participantController.register);
 router.post('/confirm', (0, validateRequest_1.default)(seminar_confirmation_dto_1.seminarConfirmationDto), seminar_confirmation_controller_1.seminarConfirmationController.confirmParticipation);
 // GET routes – specific ones BEFORE dynamic
-router.get('/', seminar_controller_1.seminarController.getAllSeminars);
+router.get('/', (0, auth_1.auth)(['admin']), seminar_controller_1.seminarController.getAllSeminars);
 router.get('/active', seminar_controller_1.seminarController.getActiveSeminar);
 router.get('/pdf-seminar', seminar_controller_1.seminarController.getPdfSeminar);
 // Dynamic routes (must be LAST)

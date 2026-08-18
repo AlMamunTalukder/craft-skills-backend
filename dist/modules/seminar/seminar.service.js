@@ -70,7 +70,7 @@ const getActiveSeminar = async () => {
             isActive: true,
             registrationDeadline: { $gte: sixHoursAgo },
         })
-            .select(PUBLIC_FIELDS)
+            .select('_id title date')
             .sort({ date: 1 })
             .lean();
         return seminar;
@@ -82,7 +82,7 @@ const getActiveSeminar = async () => {
 const getPdfSeminar = async () => {
     try {
         const seminar = await seminar_model_1.Seminar.findOne({})
-            .select(PUBLIC_FIELDS)
+            .select('_id title date')
             .sort({ date: -1 })
             .lean();
         return seminar;

@@ -75,7 +75,7 @@ const getActiveSeminar = async (): Promise<ISeminar | null> => {
             isActive: true,
             registrationDeadline: { $gte: sixHoursAgo },
         })
-            .select(PUBLIC_FIELDS)
+            .select('_id title date')
             .sort({ date: 1 })
             .lean();
 
@@ -88,7 +88,7 @@ const getActiveSeminar = async (): Promise<ISeminar | null> => {
 const getPdfSeminar = async (): Promise<ISeminar | null> => {
     try {
         const seminar = await Seminar.findOne({})
-            .select(PUBLIC_FIELDS)
+            .select('_id title date')
             .sort({ date: -1 })
             .lean();
         return seminar as unknown as ISeminar | null;
