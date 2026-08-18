@@ -18,11 +18,12 @@ import { ExclusiveOfferRoutes } from 'src/modules/exclusive/exclusive-offer.rout
 import { ExclusiveVisitorRoutes } from 'src/modules/exclusive/exclusive-visitor.routes';
 import { ExclusiveBatchRoutes } from 'src/modules/exclusive/exclusive-batch.routes';
 import { ExclusiveGiftRoutes } from 'src/modules/exclusive/exclusive-gift.routes';
+import { auth } from 'src/middleware/auth';
 
 const router = Router();
 
 // Debug route to see all registered routes
-router.get('/debug-routes', (req, res) => {
+router.get('/debug-routes', auth(['admin']), (req, res) => {
     const allRoutes = [
         { path: '/auth', methods: ['POST'] },
         { path: '/users', methods: ['GET', 'POST'] },

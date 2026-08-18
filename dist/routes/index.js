@@ -23,9 +23,10 @@ const exclusive_offer_routes_1 = require("../modules/exclusive/exclusive-offer.r
 const exclusive_visitor_routes_1 = require("../modules/exclusive/exclusive-visitor.routes");
 const exclusive_batch_routes_1 = require("../modules/exclusive/exclusive-batch.routes");
 const exclusive_gift_routes_1 = require("../modules/exclusive/exclusive-gift.routes");
+const auth_1 = require("../middleware/auth");
 const router = (0, express_1.Router)();
 // Debug route to see all registered routes
-router.get('/debug-routes', (req, res) => {
+router.get('/debug-routes', (0, auth_1.auth)(['admin']), (req, res) => {
     const allRoutes = [
         { path: '/auth', methods: ['POST'] },
         { path: '/users', methods: ['GET', 'POST'] },

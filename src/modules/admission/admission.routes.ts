@@ -27,15 +27,15 @@ router.post('/payment/ipn', admissionPaymentController.ipn);
 router.post('/register', validateRequest(createAdmissionDto), admissionController.createAdmission);
 
 // Protected routes (admin access)
-router.get('/', admissionController.getAllAdmissions);
-router.get('/batch/:batchId', admissionController.getAdmissionsByBatchId);
+router.get('/', auth(['admin']), admissionController.getAllAdmissions);
+router.get('/batch/:batchId', auth(['admin']), admissionController.getAdmissionsByBatchId);
 
 // Parameterized routes
-router.get('/:id', admissionController.getAdmissionById);
-router.put('/:id', validateRequest(updateAdmissionDto), admissionController.updateAdmission);
-router.put('/:id/status', admissionController.updateStatus);
-router.put('/:id/payment-status', admissionController.updatePaymentStatus);
-router.delete('/:id', admissionController.deleteAdmission);
+router.get('/:id', auth(['admin']), admissionController.getAdmissionById);
+router.put('/:id', auth(['admin']), validateRequest(updateAdmissionDto), admissionController.updateAdmission);
+router.put('/:id/status', auth(['admin']), admissionController.updateStatus);
+router.put('/:id/payment-status', auth(['admin']), admissionController.updatePaymentStatus);
+router.delete('/:id', auth(['admin']), admissionController.deleteAdmission);
 
 // Result routes
 router.put('/:id/result', auth(['admin', 'teacher']), admissionController.updateAdmissionResult);

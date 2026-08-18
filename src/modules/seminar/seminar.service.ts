@@ -2,9 +2,13 @@ import AppError from 'src/errors/AppError';
 import { Seminar } from './seminar.model';
 import type { ISeminar } from './seminar.interface';
 
+const PUBLIC_FIELDS = 'sl title description date registrationDeadline isActive createdAt updatedAt';
+
 const getAllSeminars = async (): Promise<ISeminar[]> => {
     try {
-        const seminars = await Seminar.find().sort({ createdAt: -1 });
+        const seminars = await Seminar.find()
+            .select(PUBLIC_FIELDS)
+            .sort({ createdAt: -1 });
         return seminars;
     } catch (error: any) {
         throw new AppError(500, 'Database error: ' + error.message);
@@ -70,7 +74,10 @@ const getActiveSeminar = async (): Promise<ISeminar | null> => {
         const seminar = await Seminar.findOne({
             isActive: true,
             registrationDeadline: { $gte: sixHoursAgo },
-        }).sort({ date: 1 }).lean();
+        })
+            .select(PUBLIC_FIELDS)
+            .sort({ date: 1 })
+            .lean();
 
         return seminar as unknown as ISeminar | null;
     } catch (error: any) {
@@ -80,7 +87,10 @@ const getActiveSeminar = async (): Promise<ISeminar | null> => {
 
 const getPdfSeminar = async (): Promise<ISeminar | null> => {
     try {
-        const seminar = await Seminar.findOne({}).sort({ date: -1 }).lean();
+        const seminar = await Seminar.findOne({})
+            .select(PUBLIC_FIELDS)
+            .sort({ date: -1 })
+            .lean();
         return seminar as unknown as ISeminar | null;
     } catch (error: any) {
         return null;

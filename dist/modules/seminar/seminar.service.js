@@ -6,9 +6,12 @@ Object.defineProperty(exports, "__esModule", { value: true });
 exports.seminarService = void 0;
 const AppError_1 = __importDefault(require("../../errors/AppError"));
 const seminar_model_1 = require("./seminar.model");
+const PUBLIC_FIELDS = 'sl title description date registrationDeadline isActive createdAt updatedAt';
 const getAllSeminars = async () => {
     try {
-        const seminars = await seminar_model_1.Seminar.find().sort({ createdAt: -1 });
+        const seminars = await seminar_model_1.Seminar.find()
+            .select(PUBLIC_FIELDS)
+            .sort({ createdAt: -1 });
         return seminars;
     }
     catch (error) {
@@ -66,7 +69,10 @@ const getActiveSeminar = async () => {
         const seminar = await seminar_model_1.Seminar.findOne({
             isActive: true,
             registrationDeadline: { $gte: sixHoursAgo },
-        }).sort({ date: 1 }).lean();
+        })
+            .select(PUBLIC_FIELDS)
+            .sort({ date: 1 })
+            .lean();
         return seminar;
     }
     catch (error) {
@@ -75,7 +81,10 @@ const getActiveSeminar = async () => {
 };
 const getPdfSeminar = async () => {
     try {
-        const seminar = await seminar_model_1.Seminar.findOne({}).sort({ date: -1 }).lean();
+        const seminar = await seminar_model_1.Seminar.findOne({})
+            .select(PUBLIC_FIELDS)
+            .sort({ date: -1 })
+            .lean();
         return seminar;
     }
     catch (error) {

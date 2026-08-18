@@ -24,14 +24,14 @@ router.post('/payment/ipn', admission_payment_controller_1.admissionPaymentContr
 // Public route for student registration (direct, no payment)
 router.post('/register', (0, validateRequest_1.default)(admission_dto_1.createAdmissionDto), admission_controller_1.admissionController.createAdmission);
 // Protected routes (admin access)
-router.get('/', admission_controller_1.admissionController.getAllAdmissions);
-router.get('/batch/:batchId', admission_controller_1.admissionController.getAdmissionsByBatchId);
+router.get('/', (0, auth_1.auth)(['admin']), admission_controller_1.admissionController.getAllAdmissions);
+router.get('/batch/:batchId', (0, auth_1.auth)(['admin']), admission_controller_1.admissionController.getAdmissionsByBatchId);
 // Parameterized routes
-router.get('/:id', admission_controller_1.admissionController.getAdmissionById);
-router.put('/:id', (0, validateRequest_1.default)(admission_dto_1.updateAdmissionDto), admission_controller_1.admissionController.updateAdmission);
-router.put('/:id/status', admission_controller_1.admissionController.updateStatus);
-router.put('/:id/payment-status', admission_controller_1.admissionController.updatePaymentStatus);
-router.delete('/:id', admission_controller_1.admissionController.deleteAdmission);
+router.get('/:id', (0, auth_1.auth)(['admin']), admission_controller_1.admissionController.getAdmissionById);
+router.put('/:id', (0, auth_1.auth)(['admin']), (0, validateRequest_1.default)(admission_dto_1.updateAdmissionDto), admission_controller_1.admissionController.updateAdmission);
+router.put('/:id/status', (0, auth_1.auth)(['admin']), admission_controller_1.admissionController.updateStatus);
+router.put('/:id/payment-status', (0, auth_1.auth)(['admin']), admission_controller_1.admissionController.updatePaymentStatus);
+router.delete('/:id', (0, auth_1.auth)(['admin']), admission_controller_1.admissionController.deleteAdmission);
 // Result routes
 router.put('/:id/result', (0, auth_1.auth)(['admin', 'teacher']), admission_controller_1.admissionController.updateAdmissionResult);
 // Student routes

@@ -6,6 +6,7 @@ import validateRequest from 'src/utils/validateRequest';
 import { participantController } from './participant.controller';
 import { seminarConfirmationDto } from '../seminar-confirmation/seminar-confirmation.dto';
 import { seminarConfirmationController } from '../seminar-confirmation/seminar-confirmation.controller';
+import { auth } from 'src/middleware/auth';
 
 const router = Router();
 
@@ -23,12 +24,12 @@ router.get('/active', seminarController.getActiveSeminar);
 router.get('/pdf-seminar', seminarController.getPdfSeminar);
 
 // Dynamic routes (must be LAST)
-router.get('/:id', seminarController.getSeminarById);
+router.get('/:id', auth(['admin']), seminarController.getSeminarById);
 
-// Admin routes (with auth if needed)
-router.post('/', validateRequest(createSeminarDto), seminarController.createSeminar);
-router.put('/:id', validateRequest(updateSeminarDto), seminarController.updateSeminar);
-router.put('/:id/status', seminarController.changeStatus);
-router.delete('/:id', seminarController.deleteSeminar);
+// Admin routes (with auth)
+router.post('/', auth(['admin']), validateRequest(createSeminarDto), seminarController.createSeminar);
+router.put('/:id', auth(['admin']), validateRequest(updateSeminarDto), seminarController.updateSeminar);
+router.put('/:id/status', auth(['admin']), seminarController.changeStatus);
+router.delete('/:id', auth(['admin']), seminarController.deleteSeminar);
 
 export const SeminarRoutes = router;
