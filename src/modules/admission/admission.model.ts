@@ -25,6 +25,7 @@ export interface IAdmission extends Document {
     agreedToTerms: boolean;
     agreedToTermsAt: Date;
     termsVersion?: string;
+    sheetSynced?: boolean;
 }
 
 const AdmissionSchema = new Schema<IAdmission>(
@@ -136,6 +137,10 @@ const AdmissionSchema = new Schema<IAdmission>(
         termsVersion: {
             type: String,
             default: '1.0',
+        },
+        sheetSynced: {
+            type: Boolean,
+            default: false,
         },
     },
     {

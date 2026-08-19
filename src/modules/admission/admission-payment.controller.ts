@@ -223,57 +223,8 @@ export const admissionPaymentController = {
                 }
             }
 
-            // Google Sheets
-            try {
-                const { appendDataToGoogleSheet } = await import('@/utils/googleSheets');
-                const { sanitizePhoneNumber } = await import('@/utils/phoneSanitizer');
-
-                const batch = existingAdmission.batchId
-                    ? await CourseBatch.findById(existingAdmission.batchId)
-                    : null;
-                const course = existingAdmission.courseId
-                    ? await Course.findById(existingAdmission.courseId)
-                    : null;
-
-                await appendDataToGoogleSheet(
-                    `${batch?.name || 'Admission'} - admission`,
-                    [
-                        'Name',
-                        'Phone',
-                        'WhatsApp',
-                        'Email',
-                        'Facebook',
-                        'Course',
-                        'Batch',
-                        'Coupon Code',
-                        'Amount',
-                        'Payment Method',
-                        'Sender Number',
-                        'Payment Status',
-                        'Transaction ID',
-                        'Registered At',
-                    ],
-                    [
-                        existingAdmission.name || '',
-                        sanitizePhoneNumber(existingAdmission.phone) || '',
-                        sanitizePhoneNumber(existingAdmission.whatsapp) || '',
-                        existingAdmission.email || '',
-                        existingAdmission.facebook || '',
-                        course?.name || '',
-                        batch?.name || '',
-                        existingAdmission.couponCode || '',
-                        String(existingAdmission.amount || amount),
-                        existingAdmission.paymentMethod || card_type || 'sslcommerz',
-                        existingAdmission.senderNumber || '',
-                        'paid',
-                        lookupTranId,
-                        new Date().toLocaleString('en-BD', { timeZone: 'Asia/Dhaka' }),
-                    ],
-                );
-                console.log('✅ Sheet updated');
-            } catch (sheetError: any) {
-                console.error('❌ Sheet error:', sheetError.message);
-            }
+            // Google Sheets — NO write here: the admission worker already appends
+            // the registration row; appending again here caused duplicate rows.
 
             // Success!
             const params = new URLSearchParams({

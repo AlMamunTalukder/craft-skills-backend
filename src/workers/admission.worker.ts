@@ -9,6 +9,10 @@ import { CourseBatch } from 'src/modules/coursebatch/coursebatch.model';
 import { redisConnection } from 'src/queues/connection';
 import { sanitizePhoneNumber } from 'src/utils/phoneSanitizer';
 
+// BullMQ retries after failures; the dedup window ensures a retried job
+// reuses the record it already created instead of inserting a duplicate.
+const DEDUP_WINDOW_MS = 10 * 60 * 1000;
+
 new Worker(
     'admission-queue',
     async (job) => {
@@ -24,18 +28,39 @@ new Worker(
         const session = await mongoose.startSession();
         session.startTransaction();
 
+        let admission: any;
+
         try {
-            const [admission] = await Admission.create(
-                [
-                    {
-                        ...admissionData,
-                        phone: cleanPhone,
-                        whatsapp: cleanWhatsapp,
-                        senderNumber: cleanSenderNumber,
-                    },
-                ],
-                { session },
-            );
+            const existing = await Admission.findOne({
+                phone: cleanPhone,
+                courseId: admissionData.courseId,
+                batchId: admissionData.batchId,
+                registeredAt: { $gte: new Date(Date.now() - DEDUP_WINDOW_MS) },
+            }).session(session);
+
+            if (existing) {
+                if (existing.sheetSynced) {
+                    await session.commitTransaction();
+                    session.endSession();
+                    logger.info(`Admission ${existing._id} already synced, skipping`);
+                    return existing;
+                }
+                logger.info(`Reusing admission ${existing._id} (sheet write failed before)`);
+                admission = existing;
+            } else {
+                const [created] = await Admission.create(
+                    [
+                        {
+                            ...admissionData,
+                            phone: cleanPhone,
+                            whatsapp: cleanWhatsapp,
+                            senderNumber: cleanSenderNumber,
+                        },
+                    ],
+                    { session },
+                );
+                admission = created;
+            }
 
             const course = await Course.findById(admissionData.courseId).session(session);
             const batch = await CourseBatch.findById(admissionData.batchId).session(session);
@@ -88,7 +113,22 @@ new Worker(
                     cleanSenderNumber,
                     registrationDate,
                 ],
+                // Dedup on Phone column: a retried job re-appends the same row instead
+                // of creating a second one.
+                { dedupColumn: 2, dedupValue: cleanPhone },
             );
+
+            // Mark synced only AFTER a successful append. If the mark itself fails,
+            // the job still completes — a retry would find the record and the dedup
+            // check would skip the duplicate row.
+            try {
+                await Admission.updateOne(
+                    { _id: admission._id },
+                    { $set: { sheetSynced: true } },
+                );
+            } catch (markError: any) {
+                logger.warn(`Failed to mark sheetSynced: ${markError.message}`);
+            }
 
             return admission;
         } catch (error: any) {

@@ -2,13 +2,10 @@ import AppError from 'src/errors/AppError';
 import { Seminar } from './seminar.model';
 import type { ISeminar } from './seminar.interface';
 
-const PUBLIC_FIELDS = 'sl title description date registrationDeadline isActive createdAt updatedAt';
-
 const getAllSeminars = async (): Promise<ISeminar[]> => {
     try {
-        const seminars = await Seminar.find()
-            .select(PUBLIC_FIELDS)
-            .sort({ createdAt: -1 });
+        // Admin-only route — full documents (dashboard needs participants + secret group links)
+        const seminars = await Seminar.find().sort({ createdAt: -1 });
         return seminars;
     } catch (error: any) {
         throw new AppError(500, 'Database error: ' + error.message);

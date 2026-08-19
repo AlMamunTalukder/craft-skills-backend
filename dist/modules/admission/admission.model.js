@@ -111,6 +111,10 @@ const AdmissionSchema = new mongoose_1.Schema({
         type: String,
         default: '1.0',
     },
+    sheetSynced: {
+        type: Boolean,
+        default: false,
+    },
 }, {
     timestamps: true,
 });

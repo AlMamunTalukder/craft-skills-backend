@@ -15,7 +15,17 @@ const auth = new googleapis_1.google.auth.JWT({
 });
 const sheets = googleapis_1.google.sheets({ version: 'v4', auth });
 const sanitizeTabName = (title) => title.replace(/[:\\/?*\[\]]/g, '').substring(0, 100);
-const appendDataToGoogleSheet = async (tabTitle, headers, values) => {
+const columnToLetter = (col) => {
+    let letters = '';
+    let n = col;
+    while (n > 0) {
+        const rem = (n - 1) % 26;
+        letters = String.fromCharCode(65 + rem) + letters;
+        n = Math.floor((n - 1) / 26);
+    }
+    return letters;
+};
+const appendDataToGoogleSheet = async (tabTitle, headers, values, options) => {
     const sanitizedTitle = sanitizeTabName(tabTitle);
     logger_1.default.info(`Attempting to append data to Google Sheet: ${sanitizedTitle}`);
     try {
@@ -48,6 +58,22 @@ const appendDataToGoogleSheet = async (tabTitle, headers, values) => {
                     values: [headers],
                 },
             });
+        }
+        else if (options?.dedupColumn !== undefined &&
+            options.dedupValue !== undefined) {
+            // Idempotent append: skip if the dedup value already exists in the column.
+            const col = columnToLetter(options.dedupColumn);
+            const existing = await sheets.spreadsheets.values.get({
+                spreadsheetId: SPREADSHEET_ID,
+                range: `${sanitizedTitle}!${col}2:${col}`,
+            });
+            const existingValues = (existing.data.values || [])
+                .flat()
+                .map((v) => String(v));
+            if (existingValues.includes(String(options.dedupValue))) {
+                logger_1.default.info(`Row already exists in "${sanitizedTitle}", skipping append`);
+                return;
+            }
         }
         logger_1.default.info(`Appending data row to tab: ${sanitizedTitle}`);
         await sheets.spreadsheets.values.append({
