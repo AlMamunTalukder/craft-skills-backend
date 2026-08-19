@@ -223,8 +223,62 @@ export const admissionPaymentController = {
                 }
             }
 
-            // Google Sheets — NO write here: the admission worker already appends
-            // the registration row; appending again here caused duplicate rows.
+            // Google Sheets — write the paid row here (the worker only runs for
+            // the /admissions/register queue path). Dedup on Phone so a repeated
+            // success callback can't append the same registration twice.
+            try {
+                const { appendDataToGoogleSheet } = await import('@/utils/googleSheets');
+                const { sanitizePhoneNumber } = await import('@/utils/phoneSanitizer');
+
+                const cleanPhone = sanitizePhoneNumber(existingAdmission.phone) || '';
+
+                const batch = existingAdmission.batchId
+                    ? await CourseBatch.findById(existingAdmission.batchId)
+                    : null;
+                const course = existingAdmission.courseId
+                    ? await Course.findById(existingAdmission.courseId)
+                    : null;
+
+                await appendDataToGoogleSheet(
+                    `${batch?.name || 'Admission'} - admission`,
+                    [
+                        'Name',
+                        'Phone',
+                        'WhatsApp',
+                        'Email',
+                        'Facebook',
+                        'Course',
+                        'Batch',
+                        'Coupon Code',
+                        'Amount',
+                        'Payment Method',
+                        'Sender Number',
+                        'Payment Status',
+                        'Transaction ID',
+                        'Registered At',
+                    ],
+                    [
+                        existingAdmission.name || '',
+                        cleanPhone,
+                        sanitizePhoneNumber(existingAdmission.whatsapp) || '',
+                        existingAdmission.email || '',
+                        existingAdmission.facebook || '',
+                        course?.name || '',
+                        batch?.name || '',
+                        existingAdmission.couponCode || '',
+                        String(existingAdmission.amount || amount),
+                        existingAdmission.paymentMethod || card_type || 'sslcommerz',
+                        existingAdmission.senderNumber || '',
+                        'paid',
+                        lookupTranId,
+                        new Date().toLocaleString('en-BD', { timeZone: 'Asia/Dhaka' }),
+                    ],
+                    { dedupColumn: 2, dedupValue: cleanPhone },
+                );
+                console.log('✅ Sheet updated');
+            } catch (sheetError: any) {
+                console.error('❌ Sheet error:', sheetError.message);
+            }
 
             // Success!
             const params = new URLSearchParams({

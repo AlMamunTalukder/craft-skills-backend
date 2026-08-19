@@ -82,6 +82,8 @@ new bullmq_1.Worker('admission-queue', async (job) => {
             'Amount',
             'Payment Method',
             'Sender Number',
+            'Payment Status',
+            'Transaction ID',
             'Registered At',
         ], [
             admission.name || '',
@@ -95,6 +97,8 @@ new bullmq_1.Worker('admission-queue', async (job) => {
             (admission.amount || course.price).toString(),
             admission.paymentMethod || '',
             cleanSenderNumber,
+            admission.paymentStatus || 'paid',
+            admission.transactionId || '',
             registrationDate,
         ], 
         // Dedup on Phone column: a retried job re-appends the same row instead

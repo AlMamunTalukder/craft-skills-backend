@@ -97,6 +97,8 @@ new Worker(
                     'Amount',
                     'Payment Method',
                     'Sender Number',
+                    'Payment Status',
+                    'Transaction ID',
                     'Registered At',
                 ],
                 [
@@ -111,6 +113,8 @@ new Worker(
                     (admission.amount || course.price).toString(),
                     admission.paymentMethod || '',
                     cleanSenderNumber,
+                    admission.paymentStatus || 'paid',
+                    admission.transactionId || '',
                     registrationDate,
                 ],
                 // Dedup on Phone column: a retried job re-appends the same row instead
