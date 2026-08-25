@@ -12,8 +12,6 @@ const course_model_1 = require("../modules/course/course.model");
 const coursebatch_model_1 = require("../modules/coursebatch/coursebatch.model");
 const connection_1 = require("../queues/connection");
 const phoneSanitizer_1 = require("../utils/phoneSanitizer");
-// BullMQ retries after failures; the dedup window ensures a retried job
-// reuses the record it already created instead of inserting a duplicate.
 const DEDUP_WINDOW_MS = 10 * 60 * 1000;
 new bullmq_1.Worker('admission-queue', async (job) => {
     const { admissionData } = job.data;

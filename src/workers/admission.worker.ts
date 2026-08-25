@@ -9,8 +9,6 @@ import { CourseBatch } from 'src/modules/coursebatch/coursebatch.model';
 import { redisConnection } from 'src/queues/connection';
 import { sanitizePhoneNumber } from 'src/utils/phoneSanitizer';
 
-// BullMQ retries after failures; the dedup window ensures a retried job
-// reuses the record it already created instead of inserting a duplicate.
 const DEDUP_WINDOW_MS = 10 * 60 * 1000;
 
 new Worker(

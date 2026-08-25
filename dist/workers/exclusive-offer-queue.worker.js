@@ -16,17 +16,14 @@ new bullmq_1.Worker('exclusive-offer-queue', async (job) => {
     const { participantData } = job.data;
     logger_1.default.info(participantData, '📦 Received participantData');
     const cleanPhone = (0, phoneSanitizer_1.sanitizePhoneNumber)(participantData.phone) || participantData.phone;
-    // ✅ Use findOneAndUpdate with upsert to avoid duplicate key errors
     const session = await mongoose_1.default.startSession();
     try {
         session.startTransaction();
-        // Build the update object
         const updateData = {
             ...participantData,
             phone: cleanPhone,
             paymentStatus: participantData.paymentStatus || 'success',
         };
-        // Upsert: if document exists, update; else create
         const participant = await exclusive_offer_model_1.ExclusiveOfferParticipant.findOneAndUpdate({ transactionId: participantData.transactionId }, { $set: updateData }, {
             new: true,
             upsert: true,
@@ -37,21 +34,42 @@ new bullmq_1.Worker('exclusive-offer-queue', async (job) => {
         session.endSession();
         logger_1.default.info({ participantId: participant._id }, '💾 Participant saved/updated');
         // ============================
-        // FETCH BATCH INFORMATION FOR SHEET NAME
+        // FETCH BATCH INFORMATION
         // ============================
         let batchNo = 'N/A';
         let batchTitle = 'Exclusive Offer Course';
+        let batchFound = false;
+        // ✅ First, try to get batch from participantData
         if (participantData.batchId) {
             try {
-                // ✅ Use findById with proper typing
-                const batchInfo = (await exclusive_batch_model_1.ExclusiveBatch.findById(participantData.batchId).lean());
+                let batchInfo = null;
+                let batchIdValue = participantData.batchId;
+                logger_1.default.info(`🔍 Searching for batch with ID: ${batchIdValue}`);
+                // Method 1: Try as ObjectId
+                if (typeof batchIdValue === 'string' && mongoose_1.default.Types.ObjectId.isValid(batchIdValue)) {
+                    logger_1.default.info(`🔍 Trying to find batch by _id: ${batchIdValue}`);
+                    batchInfo = await exclusive_batch_model_1.ExclusiveBatch.findById(batchIdValue).lean();
+                }
+                // Method 2: Try as batchNo
+                if (!batchInfo) {
+                    logger_1.default.info(`🔍 Trying to find batch by batchNo: ${batchIdValue}`);
+                    batchInfo = await exclusive_batch_model_1.ExclusiveBatch.findOne({
+                        batchNo: batchIdValue.toString()
+                    }).lean();
+                }
+                // Method 3: If batchId is object with _id
+                if (!batchInfo && typeof batchIdValue === 'object' && batchIdValue._id) {
+                    logger_1.default.info(`🔍 Trying to find batch by nested _id`);
+                    batchInfo = await exclusive_batch_model_1.ExclusiveBatch.findById(batchIdValue._id).lean();
+                }
                 if (batchInfo) {
                     batchNo = batchInfo.batchNo?.toString() || 'N/A';
                     batchTitle = batchInfo.title || 'Exclusive Offer Course';
+                    batchFound = true;
                     logger_1.default.info(`✅ Found batch: ${batchNo} - ${batchTitle}`);
                 }
                 else {
-                    logger_1.default.warn(`⚠️ Batch not found for ID: ${participantData.batchId}`);
+                    logger_1.default.warn(`⚠️ Batch not found for: ${batchIdValue}`);
                 }
             }
             catch (error) {
@@ -61,8 +79,61 @@ new bullmq_1.Worker('exclusive-offer-queue', async (job) => {
                 }, '⚠️ Could not fetch batch info');
             }
         }
+        // ✅ If no batch found, try to get the active batch (Batch 3)
+        if (!batchFound) {
+            logger_1.default.info('🔍 No batch found in participantData, looking for active batch...');
+            try {
+                const activeBatch = await exclusive_batch_model_1.ExclusiveBatch.findOne({
+                    isActive: true
+                }).lean();
+                if (activeBatch) {
+                    batchNo = activeBatch.batchNo?.toString() || 'N/A';
+                    batchTitle = activeBatch.title || 'Exclusive Offer Course';
+                    batchFound = true;
+                    logger_1.default.info(`✅ Found active batch: ${batchNo} - ${batchTitle}`);
+                }
+                else {
+                    logger_1.default.warn('⚠️ No active batch found in database');
+                    // ✅ Try to find Batch 3 specifically (by batchNo)
+                    const batch3 = await exclusive_batch_model_1.ExclusiveBatch.findOne({
+                        batchNo: '3'
+                    }).lean();
+                    if (batch3) {
+                        batchNo = '3';
+                        batchTitle = batch3.title || 'Exclusive Offer Course';
+                        batchFound = true;
+                        logger_1.default.info(`✅ Found Batch 3 specifically: ${batchNo}`);
+                    }
+                }
+            }
+            catch (error) {
+                logger_1.default.error('❌ Error finding active batch:', error);
+            }
+        }
+        // ✅ Last resort: use Batch 2 or 3 by batchNo
+        if (!batchFound) {
+            logger_1.default.info('🔍 Trying to find Batch 2 or 3 by batchNo...');
+            const batch2 = await exclusive_batch_model_1.ExclusiveBatch.findOne({ batchNo: '2' }).lean();
+            const batch3 = await exclusive_batch_model_1.ExclusiveBatch.findOne({ batchNo: '3' }).lean();
+            if (batch3) {
+                batchNo = '3';
+                batchTitle = batch3.title || 'Exclusive Offer Course';
+                batchFound = true;
+                logger_1.default.info(`✅ Using Batch 3: ${batchNo}`);
+            }
+            else if (batch2) {
+                batchNo = '2';
+                batchTitle = batch2.title || 'Exclusive Offer Course';
+                batchFound = true;
+                logger_1.default.info(`✅ Using Batch 2: ${batchNo}`);
+            }
+            else {
+                logger_1.default.warn('⚠️ No batches found at all!');
+            }
+        }
+        logger_1.default.info(`📋 Final batch: ${batchNo} - ${batchTitle}`);
         // ============================
-        // GOOGLE SHEET - Dynamic Sheet Name
+        // GOOGLE SHEET
         // ============================
         const registrationDate = new Date().toLocaleString('en-BD', {
             timeZone: 'Asia/Dhaka',
@@ -73,10 +144,9 @@ new bullmq_1.Worker('exclusive-offer-queue', async (job) => {
             minute: '2-digit',
             hour12: true,
         });
-        // ✅ Dynamic sheet name: "Exclusive Offer Course Batch: 1"
+        // ✅ Use Batch Number in sheet name
         const sheetTitle = `Exclusive Offer Course Batch: ${batchNo}`;
-        logger_1.default.info(`📤 Attempting to append to Google Sheet: ${sheetTitle}`);
-        // ✅ Headers with only "Added By Admin" added
+        logger_1.default.info(`📤 Creating/Updating Google Sheet: ${sheetTitle}`);
         const headers = [
             'Name',
             'Phone',
@@ -90,7 +160,6 @@ new bullmq_1.Worker('exclusive-offer-queue', async (job) => {
             'Registered At',
             'Added By Admin',
         ];
-        // ✅ Data row matching headers
         const rowData = [
             participant.name || participantData.name || '',
             participant.phone || cleanPhone || '',
@@ -104,114 +173,29 @@ new bullmq_1.Worker('exclusive-offer-queue', async (job) => {
             registrationDate,
             participantData.addedByAdmin ? 'Yes' : 'No',
         ];
-        // ✅ IDEMPOTENCY: atomically claim this transaction for the sheet append.
-        // If a previous job already synced it (duplicate enqueue from ipn + payment
-        // success, or a BullMQ re-process), the DB stays single but the sheet append
-        // would duplicate. This claim makes the append run exactly once.
+        // ✅ Prevent duplicate entries
         const claim = await exclusive_offer_model_1.ExclusiveOfferParticipant.updateOne({ transactionId: participantData.transactionId, sheetSynced: { $ne: true } }, { $set: { sheetSynced: true } });
         if (claim.modifiedCount === 0) {
             logger_1.default.info({ transactionId: participantData.transactionId }, '⏭️ Skipping Google Sheet append (already synced)');
             return participant;
         }
-        logger_1.default.info(`📤 Attempting to append to Google Sheet: ${sheetTitle}`);
         try {
-            await (0, googleSheets_1.appendDataToGoogleSheet)(sheetTitle, headers, rowData);
+            await (0, googleSheets_1.appendDataToGoogleSheet)(sheetTitle, headers, rowData, {
+                dedupColumn: 2,
+                dedupValue: cleanPhone
+            });
+            logger_1.default.info(`✅ Google Sheet updated: ${sheetTitle}`);
         }
         catch (error) {
-            // Release the claim so a retry can append the row
             await exclusive_offer_model_1.ExclusiveOfferParticipant.updateOne({ transactionId: participantData.transactionId }, { $set: { sheetSynced: false } }).catch(() => undefined);
             throw error;
         }
-        logger_1.default.info(`✅ Google Sheet updated successfully: ${sheetTitle}`);
         return participant;
     }
     catch (error) {
         await session.abortTransaction();
         session.endSession();
         logger_1.default.error('❌ Worker error: ' + (error?.stack || error?.message || error));
-        throw error; // BullMQ will retry
+        throw error;
     }
 }, { connection: connection_1.redisConnection });
-// import { Worker } from 'bullmq';
-// import mongoose from 'mongoose';
-// import { redisConnection } from '../queues/connection';
-// import logger from '../shared/logger';
-// import { appendDataToGoogleSheet } from '../utils/googleSheets';
-// import { sanitizePhoneNumber } from '../utils/phoneSanitizer';
-// import { ExclusiveOfferParticipant } from '../modules/exclusive/exclusive-offer.model';
-// new Worker(
-//     'exclusive-offer-queue',
-//     async (job) => {
-//         logger.info({ jobId: job.id }, '🔁 Worker started for job');
-//         const { participantData } = job.data;
-//         logger.info(participantData, '📦 Received participantData');
-//         const cleanPhone = sanitizePhoneNumber(participantData.phone) || participantData.phone;
-//         // ✅ Use findOneAndUpdate with upsert to avoid duplicate key errors
-//         const session = await mongoose.startSession();
-//         try {
-//             session.startTransaction();
-//             // Build the update object
-//             const updateData = {
-//                 ...participantData,
-//                 phone: cleanPhone,
-//                 paymentStatus: participantData.paymentStatus || 'success',
-//             };
-//             // Upsert: if document exists, update; else create
-//             const participant = await ExclusiveOfferParticipant.findOneAndUpdate(
-//                 { transactionId: participantData.transactionId },
-//                 { $set: updateData },
-//                 {
-//                     new: true,
-//                     upsert: true,
-//                     session,
-//                     setDefaultsOnInsert: true,
-//                 },
-//             );
-//             await session.commitTransaction();
-//             session.endSession();
-//             logger.info({ participantId: participant._id }, '💾 Participant saved/updated');
-//             // ============================
-//             // GOOGLE SHEET
-//             // ============================
-//             const registrationDate = new Date().toLocaleString('en-BD', {
-//                 timeZone: 'Asia/Dhaka',
-//             });
-//             logger.info('📤 Attempting to append to Google Sheets...');
-//             await appendDataToGoogleSheet(
-//                 'Exclusive Offer Course',
-//                 [
-//                     'Name',
-//                     'Phone',
-//                     'WhatsApp',
-//                     'Email',
-//                     'Occupation',
-//                     'Course',
-//                     'Offer Price',
-//                     'Transaction ID',
-//                     'Payment Status',
-//                     'Registered At',
-//                 ],
-//                 [
-//                     participant.name || participantData.name,
-//                     participant.phone || cleanPhone,
-//                     participant.whatsapp || participantData.whatsapp || '',
-//                     participant.email || participantData.email || '',
-//                     participant.occupation || participantData.occupation || '',
-//                     participant.courseTitle || 'Voice & Public Speaking Masterclass',
-//                     String(participant.offerPrice || participantData.offerPrice || 199),
-//                     participantData.transactionId || '',
-//                     participantData.paymentStatus || 'success',
-//                     registrationDate,
-//                 ],
-//             );
-//             logger.info('✅ Google Sheet updated successfully');
-//             return participant;
-//         } catch (error: any) {
-//             await session.abortTransaction();
-//             session.endSession();
-//             logger.error('❌ Worker error: ' + (error?.stack || error?.message || error));
-//             throw error; // BullMQ will retry
-//         }
-//     },
-//     { connection: redisConnection },
-// );
