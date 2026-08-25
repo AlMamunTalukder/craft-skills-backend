@@ -19,7 +19,7 @@ const registerParticipant = async (data: any): Promise<{ message: string; partic
         const now = new Date();
         const sixHoursAgo = new Date(now.getTime() - 6 * 60 * 60 * 1000);
         if (sixHoursAgo > seminar.registrationDeadline) {
-            throw new AppError(400, 'Registration deadline has passed');
+            throw new AppError(400, 'Registration deadline has passed'); 
         }
 
         // Add job to queue for processing

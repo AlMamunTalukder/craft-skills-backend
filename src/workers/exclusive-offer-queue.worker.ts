@@ -24,9 +24,13 @@ interface IBatch {
     enrolledCount?: number;
 }
 
-new Worker(
+console.log('🔴🔴🔴 EXCLUSIVE OFFER WORKER: STARTING 🔴🔴🔴');
+
+// ✅ Create worker and assign to variable to prevent garbage collection
+const exclusiveOfferWorker = new Worker(
     'exclusive-offer-queue',
     async (job: any) => {
+        console.log(`📦 JOB RECEIVED: ${job.id}`);
         logger.info({ jobId: job.id }, '🔁 Worker started for job');
 
         const { participantData } = job.data;
@@ -59,6 +63,7 @@ new Worker(
             session.endSession();
 
             logger.info({ participantId: participant._id }, '💾 Participant saved/updated');
+            console.log(`✅ Participant saved: ${participant._id}`);
 
             // ============================
             // FETCH BATCH INFORMATION
@@ -67,13 +72,14 @@ new Worker(
             let batchTitle = 'Exclusive Offer Course';
             let batchFound = false;
 
-            // ✅ First, try to get batch from participantData
+            // ✅ Try to get batch from participantData
             if (participantData.batchId) {
                 try {
                     let batchInfo = null;
                     let batchIdValue = participantData.batchId;
 
                     logger.info(`🔍 Searching for batch with ID: ${batchIdValue}`);
+                    console.log(`🔍 Searching for batch: ${batchIdValue}`);
 
                     // Method 1: Try as ObjectId
                     if (typeof batchIdValue === 'string' && mongoose.Types.ObjectId.isValid(batchIdValue)) {
@@ -89,17 +95,12 @@ new Worker(
                         }).lean() as IBatch | null;
                     }
 
-                    // Method 3: If batchId is object with _id
-                    if (!batchInfo && typeof batchIdValue === 'object' && batchIdValue._id) {
-                        logger.info(`🔍 Trying to find batch by nested _id`);
-                        batchInfo = await ExclusiveBatch.findById(batchIdValue._id).lean() as IBatch | null;
-                    }
-
                     if (batchInfo) {
                         batchNo = batchInfo.batchNo?.toString() || 'N/A';
                         batchTitle = batchInfo.title || 'Exclusive Offer Course';
                         batchFound = true;
                         logger.info(`✅ Found batch: ${batchNo} - ${batchTitle}`);
+                        console.log(`✅ Found batch: ${batchNo}`);
                     } else {
                         logger.warn(`⚠️ Batch not found for: ${batchIdValue}`);
                     }
@@ -111,9 +112,10 @@ new Worker(
                 }
             }
 
-            // ✅ If no batch found, try to get the active batch (Batch 3)
+            // ✅ If no batch found, get active batch
             if (!batchFound) {
-                logger.info('🔍 No batch found in participantData, looking for active batch...');
+                logger.info('🔍 Looking for active batch...');
+                console.log('🔍 Looking for active batch...');
                 try {
                     const activeBatch = await ExclusiveBatch.findOne({ 
                         isActive: true 
@@ -123,52 +125,40 @@ new Worker(
                         batchNo = activeBatch.batchNo?.toString() || 'N/A';
                         batchTitle = activeBatch.title || 'Exclusive Offer Course';
                         batchFound = true;
-                        logger.info(`✅ Found active batch: ${batchNo} - ${batchTitle}`);
-                    } else {
-                        logger.warn('⚠️ No active batch found in database');
-                        
-                        // ✅ Try to find Batch 3 specifically (by batchNo)
-                        const batch3 = await ExclusiveBatch.findOne({ 
-                            batchNo: '3' 
-                        }).lean() as IBatch | null;
-                        
-                        if (batch3) {
-                            batchNo = '3';
-                            batchTitle = batch3.title || 'Exclusive Offer Course';
-                            batchFound = true;
-                            logger.info(`✅ Found Batch 3 specifically: ${batchNo}`);
-                        }
+                        logger.info(`✅ Found active batch: ${batchNo}`);
+                        console.log(`✅ Found active batch: ${batchNo}`);
                     }
                 } catch (error: any) {
                     logger.error('❌ Error finding active batch:', error);
                 }
             }
 
-            // ✅ Last resort: use Batch 2 or 3 by batchNo
+            // ✅ If still no batch, try Batch 3
             if (!batchFound) {
-                logger.info('🔍 Trying to find Batch 2 or 3 by batchNo...');
-                const batch2 = await ExclusiveBatch.findOne({ batchNo: '2' }).lean() as IBatch | null;
-                const batch3 = await ExclusiveBatch.findOne({ batchNo: '3' }).lean() as IBatch | null;
-                
-                if (batch3) {
-                    batchNo = '3';
-                    batchTitle = batch3.title || 'Exclusive Offer Course';
-                    batchFound = true;
-                    logger.info(`✅ Using Batch 3: ${batchNo}`);
-                } else if (batch2) {
-                    batchNo = '2';
-                    batchTitle = batch2.title || 'Exclusive Offer Course';
-                    batchFound = true;
-                    logger.info(`✅ Using Batch 2: ${batchNo}`);
-                } else {
-                    logger.warn('⚠️ No batches found at all!');
+                logger.info('🔍 Looking for Batch 3...');
+                console.log('🔍 Looking for Batch 3...');
+                try {
+                    const batch3 = await ExclusiveBatch.findOne({ 
+                        batchNo: '3' 
+                    }).lean() as IBatch | null;
+                    
+                    if (batch3) {
+                        batchNo = '3';
+                        batchTitle = batch3.title || 'Exclusive Offer Course';
+                        batchFound = true;
+                        logger.info(`✅ Found Batch 3`);
+                        console.log(`✅ Found Batch 3`);
+                    }
+                } catch (error: any) {
+                    logger.error('❌ Error finding Batch 3:', error);
                 }
             }
 
             logger.info(`📋 Final batch: ${batchNo} - ${batchTitle}`);
+            console.log(`📋 Final batch: ${batchNo}`);
 
             // ============================
-            // GOOGLE SHEET
+            // GOOGLE SHEET - CREATE NEW SHEET
             // ============================
             const registrationDate = new Date().toLocaleString('en-BD', {
                 timeZone: 'Asia/Dhaka',
@@ -180,10 +170,11 @@ new Worker(
                 hour12: true,
             });
 
-            // ✅ Use Batch Number in sheet name
+            // ✅ Sheet name with batch number
             const sheetTitle = `Exclusive Offer Course Batch: ${batchNo}`;
 
             logger.info(`📤 Creating/Updating Google Sheet: ${sheetTitle}`);
+            console.log(`📤 Creating sheet: ${sheetTitle}`);
 
             const headers = [
                 'Name',
@@ -213,7 +204,7 @@ new Worker(
                 participantData.addedByAdmin ? 'Yes' : 'No',
             ];
 
-            // ✅ Prevent duplicate entries
+            // ✅ Check if already synced
             const claim = await ExclusiveOfferParticipant.updateOne(
                 { transactionId: participantData.transactionId, sheetSynced: { $ne: true } },
                 { $set: { sheetSynced: true } },
@@ -224,16 +215,22 @@ new Worker(
                     { transactionId: participantData.transactionId },
                     '⏭️ Skipping Google Sheet append (already synced)',
                 );
+                console.log(`⏭️ Already synced: ${participantData.transactionId}`);
                 return participant;
             }
 
+            // ✅ Append to Google Sheet
             try {
+                console.log(`📤 Appending to Google Sheet: ${sheetTitle}`);
                 await appendDataToGoogleSheet(sheetTitle, headers, rowData, { 
                     dedupColumn: 2, 
                     dedupValue: cleanPhone 
                 });
                 logger.info(`✅ Google Sheet updated: ${sheetTitle}`);
-            } catch (error) {
+                console.log(`✅ Google Sheet updated: ${sheetTitle}`);
+            } catch (error: any) {
+                console.error(`❌ Failed to append to sheet:`, error.message);
+                // Release claim so retry can append
                 await ExclusiveOfferParticipant.updateOne(
                     { transactionId: participantData.transactionId },
                     { $set: { sheetSynced: false } },
@@ -246,8 +243,49 @@ new Worker(
             await session.abortTransaction();
             session.endSession();
             logger.error('❌ Worker error: ' + (error?.stack || error?.message || error));
+            console.error('❌ Worker error:', error.message);
             throw error;
         }
     },
-    { connection: redisConnection },
+    { 
+        connection: redisConnection,
+        concurrency: 5,
+    }
 );
+
+console.log('✅✅✅ Exclusive Offer Worker created successfully ✅✅✅');
+
+// ✅ Event listeners to keep worker alive and monitor
+exclusiveOfferWorker.on('ready', () => {
+    console.log('✅✅✅ Worker is READY and waiting for jobs!');
+    logger.info('✅ Exclusive Offer Worker is ready');
+});
+
+exclusiveOfferWorker.on('completed', (job) => {
+    if (job) {
+        console.log(`✅ Job ${job.id} completed successfully`);
+        logger.info({ jobId: job.id }, '✅ Job completed');
+    } else {
+        console.log('✅ Job completed (no job data)');
+    }
+});
+
+exclusiveOfferWorker.on('failed', (job, err) => {
+    if (job) {
+        console.error(`❌ Job ${job.id} failed:`, err.message);
+        logger.error({ jobId: job.id, error: err }, '❌ Job failed');
+    } else {
+        console.error('❌ Job failed:', err.message);
+        logger.error({ error: err }, '❌ Job failed (no job data)');
+    }
+});
+
+exclusiveOfferWorker.on('error', (err) => {
+    console.error('❌ Worker error:', err.message);
+    logger.error({ error: err }, '❌ Worker error');
+});
+
+console.log('🔴🔴🔴 EXCLUSIVE OFFER WORKER FINISHED LOADING 🔴🔴🔴');
+
+// ✅ Export for external use
+export { exclusiveOfferWorker };

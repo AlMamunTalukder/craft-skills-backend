@@ -126,7 +126,7 @@ const createAdmission = async (admissionData: Partial<IAdmission>): Promise<IAdm
         const now = new Date();
         if (batch.registrationEnd && now > batch.registrationEnd) {
             throw new AppError(400, 'Registration deadline has passed');
-        }
+        } 
 
         // Create admission
         const [admission] = await Admission.create([admissionData], { session });
