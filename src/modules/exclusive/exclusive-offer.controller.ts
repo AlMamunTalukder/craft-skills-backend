@@ -227,16 +227,26 @@ const paymentCancel = catchAsync(async (req, res) => {
 });
 
 const ipn = async (req: any, res: any) => {
+    console.log('📨 IPN RECEIVED');
+    console.log('📨 Headers:', req.headers);
+    console.log('📨 Body:', JSON.stringify(req.body, null, 2));
+    
     const { tran_id, status, val_id } = req.body;
-    console.log('📨 IPN received:', { tran_id, status, val_id });
-
-    res.sendStatus(200); // ✅ Always respond 200 immediately
-
-    if (!tran_id) return;
-
+    console.log('📨 IPN Data:', { tran_id, status, val_id });
+    
+    // ✅ Always respond 200 immediately
+    res.sendStatus(200);
+    
+    if (!tran_id) {
+        console.log('❌ No tran_id in IPN');
+        return;
+    }
+    
     try {
         const isSuccess = status === 'VALID' || status === 'VALIDATED';
-
+        console.log(`📨 Transaction ${tran_id} is ${isSuccess ? 'SUCCESS' : 'FAILED'}`);
+        
+        // ✅ Update the payment status
         const participant = await ExclusiveOfferParticipant.findOneAndUpdate(
             { transactionId: tran_id },
             {
@@ -248,29 +258,43 @@ const ipn = async (req: any, res: any) => {
             },
             { new: true },
         );
-
-        if (!participant || !isSuccess) return;
-
-        console.log('✅ IPN: DB updated for', tran_id);
-
-        // Queue Google Sheets
-        await exclusiveOfferService
-            .addToQueue({
+        
+        if (!participant) {
+            console.log(`❌ No participant found for ${tran_id}`);
+            return;
+        }
+        
+        console.log(`✅ IPN: DB updated for ${tran_id} to ${participant.paymentStatus}`);
+        
+        // ✅ If success, add job to queue for Google Sheets
+        if (isSuccess) {
+            // Get batch info
+            let batchNo = 'N/A';
+            if (participant.batchId) {
+                const batch = await ExclusiveBatch.findById(participant.batchId);
+                if (batch) {
+                    batchNo = batch.batchNo?.toString() || 'N/A';
+                }
+            }
+            
+            await exclusiveOfferService.addToQueue({
                 name: participant.name,
                 phone: participant.phone,
                 whatsapp: participant.whatsapp || '',
                 email: participant.email || '',
                 occupation: participant.occupation || '',
                 courseTitle: 'Voice & Public Speaking Masterclass',
-                offerPrice: (participant as any).price || 199,
+                offerPrice: participant.price || 199,
                 transactionId: tran_id,
                 paymentStatus: 'success',
-            })
-            .catch((e: any) => console.error('Queue error:', e.message));
-
-        console.log('✅ IPN fully processed for', tran_id);
+                batchId: participant.batchId,
+                batchNo: batchNo,
+            });
+            console.log(`✅ Job added to queue for ${tran_id}`);
+        }
     } catch (e: any) {
         console.error('❌ IPN error:', e.message);
+        console.error('Stack:', e.stack);
     }
 };
 
