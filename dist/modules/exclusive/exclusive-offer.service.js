@@ -9,7 +9,6 @@ const sslcommerz_lts_1 = __importDefault(require("sslcommerz-lts"));
 const config_1 = __importDefault(require("../../config"));
 const phoneSanitizer_1 = require("../../utils/phoneSanitizer");
 const exclusive_offer_model_1 = require("./exclusive-offer.model");
-const googleSheets_1 = require("../../utils/googleSheets");
 const exclusiveOffer_queue_1 = require("../../queues/exclusiveOffer.queue");
 const exclusive_batch_model_1 = require("./exclusive-batch.model");
 const redis_1 = __importDefault(require("../../config/redis"));
@@ -47,36 +46,9 @@ const registerParticipant = async (payload) => {
                 $inc: { enrolledCount: 1 },
             });
         }
-        // 6. ✅ ADD JOB TO QUEUE FOR GOOGLE SHEETS
-        try {
-            // Get batch number for the sheet name
-            let batchNo = 'N/A';
-            if (payload.batchId) {
-                const batch = await exclusive_batch_model_1.ExclusiveBatch.findById(payload.batchId);
-                if (batch) {
-                    batchNo = batch.batchNo?.toString() || 'N/A';
-                }
-            }
-            await addToQueue({
-                name: participant.name,
-                phone: participant.phone,
-                whatsapp: participant.whatsapp || '',
-                email: participant.email || '',
-                occupation: participant.occupation || '',
-                courseTitle: 'Voice & Public Speaking Masterclass',
-                offerPrice: participant.price || 199,
-                transactionId: participant.transactionId,
-                paymentStatus: 'pending',
-                batchId: participant.batchId,
-                batchNo: batchNo,
-                addedByAdmin: false,
-            });
-            console.log(`✅ Job added to queue for: ${tran_id}`);
-        }
-        catch (queueError) {
-            console.error('❌ Queue error (non-fatal):', queueError);
-            // Don't throw - registration already succeeded
-        }
+        // 6. ✅ DO NOT add to queue here - payment is still pending
+        // Queue will be added after successful payment via paymentSuccess callback or IPN
+        console.log(`⏭️ Skipping queue add for pending payment: ${tran_id}`);
         // 7. Prepare SSLCommerz data
         const sslData = {
             total_amount: price,
@@ -136,34 +108,30 @@ const registerParticipant = async (payload) => {
         throw new AppError_1.default(500, error.message);
     }
 };
-// ✅ Send to Google Sheets
+// ✅ Send to Google Sheets via queue (batch-specific sheet)
 const sendToGoogleSheets = async (participant) => {
-    const registrationDate = new Date().toLocaleString('en-BD', {
-        timeZone: 'Asia/Dhaka',
+    // Get batch info for sheet name
+    let batchNo = 'N/A';
+    if (participant.batchId) {
+        const batch = await exclusive_batch_model_1.ExclusiveBatch.findById(participant.batchId);
+        if (batch) {
+            batchNo = batch.batchNo?.toString() || 'N/A';
+        }
+    }
+    await addToQueue({
+        name: participant.name,
+        phone: participant.phone,
+        whatsapp: participant.whatsapp || '',
+        email: participant.email || '',
+        occupation: participant.occupation || '',
+        courseTitle: 'Voice & Public Speaking Masterclass',
+        offerPrice: participant.price || 199,
+        transactionId: participant.transactionId,
+        paymentStatus: participant.paymentStatus || 'success',
+        batchId: participant.batchId,
+        batchNo: batchNo,
+        addedByAdmin: participant.addedByAdmin || false,
     });
-    await (0, googleSheets_1.appendDataToGoogleSheet)('Exclusive Offer Students', [
-        'Name',
-        'Phone',
-        'WhatsApp',
-        'Email',
-        'Occupation',
-        'Price',
-        'Payment Status',
-        'Added By',
-        'Registered At',
-        'Transaction ID',
-    ], [
-        participant.name || '',
-        participant.phone || '',
-        participant.whatsapp || '',
-        participant.email || '',
-        participant.occupation || '',
-        String(participant.price || 199),
-        participant.paymentStatus || 'success',
-        participant.addedByAdmin ? 'Admin' : 'Student',
-        registrationDate,
-        participant.transactionId || '',
-    ]);
 };
 // ✅ Add job to queue for background processing
 // Deduplicated by transactionId so IPN + payment-success cannot enqueue twice.

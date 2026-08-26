@@ -204,6 +204,17 @@ const exclusiveOfferWorker = new Worker(
                 participantData.addedByAdmin ? 'Yes' : 'No',
             ];
 
+            // ✅ Only sync to Google Sheets if payment is successful
+            const paymentStatus = participantData.paymentStatus || 'pending';
+            if (paymentStatus !== 'success') {
+                logger.info(
+                    { transactionId: participantData.transactionId, paymentStatus },
+                    '⏭️ Skipping Google Sheet append (payment not successful)',
+                );
+                console.log(`⏭️ Payment not success (${paymentStatus}), skipping sheet sync: ${participantData.transactionId}`);
+                return participant;
+            }
+
             // ✅ Check if already synced
             const claim = await ExclusiveOfferParticipant.updateOne(
                 { transactionId: participantData.transactionId, sheetSynced: { $ne: true } },
@@ -222,9 +233,13 @@ const exclusiveOfferWorker = new Worker(
             // ✅ Append to Google Sheet
             try {
                 console.log(`📤 Appending to Google Sheet: ${sheetTitle}`);
+                // Use Transaction ID (column 7) for deduplication - unique per payment
+                // Fallback to Phone (column 1) for admin entries without transactionId
+                const transactionId = participantData.transactionId || '';
+                const useTransactionId = !!transactionId;
                 await appendDataToGoogleSheet(sheetTitle, headers, rowData, { 
-                    dedupColumn: 2, 
-                    dedupValue: cleanPhone 
+                    dedupColumn: useTransactionId ? 7 : 1, 
+                    dedupValue: useTransactionId ? transactionId : cleanPhone 
                 });
                 logger.info(`✅ Google Sheet updated: ${sheetTitle}`);
                 console.log(`✅ Google Sheet updated: ${sheetTitle}`);

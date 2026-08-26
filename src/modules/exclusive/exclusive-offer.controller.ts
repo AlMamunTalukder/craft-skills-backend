@@ -12,42 +12,9 @@ const register = catchAsync(async (req, res) => {
     // 1. Register the participant (creates DB record and SSLCommerz)
     const result = await exclusiveOfferService.registerParticipant(req.body);
     
-    // 2. ✅ ADD JOB TO QUEUE FOR GOOGLE SHEETS
-    try {
-        // Get the participant from DB using the transaction ID
-        const participant = await ExclusiveOfferParticipant.findOne({
-            transactionId: result.tran_id
-        });
-        
-        if (participant) {
-            // Get batch info for the sheet name
-            let batchNo = 'N/A';
-            if (participant.batchId) {
-                const batch = await ExclusiveBatch.findById(participant.batchId);
-                if (batch) {
-                    batchNo = batch.batchNo?.toString() || 'N/A';
-                }
-            }
-            
-            await exclusiveOfferService.addToQueue({
-                name: participant.name,
-                phone: participant.phone,
-                whatsapp: participant.whatsapp || '',
-                email: participant.email || '',
-                occupation: participant.occupation || '',
-                courseTitle: 'Voice & Public Speaking Masterclass',
-                offerPrice: participant.price || 199,
-                transactionId: participant.transactionId,
-                paymentStatus: 'pending',
-                batchId: participant.batchId,
-                batchNo: batchNo, // Add batch number for the sheet
-            });
-            console.log(`✅ Job added to queue for: ${participant.transactionId}`);
-        }
-    } catch (queueError) {
-        console.error('❌ Queue error (non-fatal):', queueError);
-        // Don't throw - registration already succeeded
-    }
+    // ✅ DO NOT add to queue here - payment is still pending
+    // Queue will be added after successful payment via paymentSuccess callback or IPN
+    console.log(`⏭️ Skipping queue add for pending payment: ${result.tran_id}`);
     
     sendResponse(res, {
         success: true,
@@ -64,7 +31,7 @@ const paymentSuccess = async (req: any, res: any) => {
         // console.log('🎉 PAYMENT SUCCESS CALLBACK RECEIVED');
         // console.log('📥 Full Body:', JSON.stringify(req.body, null, 2));
 
-        const { tran_id, val_id, amount, card_type } = req.body;
+        const { tran_id, val_id, amount, card_type, status } = req.body;
         const lookupTranId = req.body.value_a || tran_id;
 
         if (!lookupTranId || !val_id) {
@@ -82,17 +49,20 @@ const paymentSuccess = async (req: any, res: any) => {
             console.log('✅ SSLCommerz validation response:', JSON.stringify(validationResponse));
         } catch (validationError: any) {
             console.error('❌ SSLCommerz validation API error:', validationError.message);
-            // Continue anyway — DB update still happened, don't block user
+            // Don't fail here - payment might still be valid
         }
 
-        // ✅ STEP 2: Check validation status
+        // ✅ STEP 2: Check validation status - also check the status from callback
+        const callbackStatus = status || req.body.status;
         const isValid =
             !validationResponse ||
             validationResponse.status === 'VALID' ||
-            validationResponse.status === 'VALIDATED';
+            validationResponse.status === 'VALIDATED' ||
+            callbackStatus === 'VALID' ||
+            callbackStatus === 'VALIDATED';
 
         if (!isValid) {
-            console.error('❌ Transaction not valid:', validationResponse?.status);
+            console.error('❌ Transaction not valid:', { validationStatus: validationResponse?.status, callbackStatus });
             return res.redirect(`${FRONTEND_URL}/exclusive/fail`);
         }
 
@@ -243,8 +213,26 @@ const ipn = async (req: any, res: any) => {
     }
     
     try {
-        const isSuccess = status === 'VALID' || status === 'VALIDATED';
+        const callbackStatus = status || req.body.status;
+        const isSuccess = callbackStatus === 'VALID' || callbackStatus === 'VALIDATED';
         console.log(`📨 Transaction ${tran_id} is ${isSuccess ? 'SUCCESS' : 'FAILED'}`);
+        
+        // ✅ If success, also validate with SSLCommerz for extra safety
+        if (isSuccess && val_id) {
+            try {
+                const SSLCommerzPayment = require('sslcommerz-lts');
+                const sslcz = new SSLCommerzPayment(process.env.STORE_ID, process.env.STORE_PASS, true);
+                const validationResponse = await sslcz.validate({ val_id });
+                const validated = validationResponse.status === 'VALID' || validationResponse.status === 'VALIDATED';
+                
+                if (!validated) {
+                    console.warn(`⚠️ IPN: SSLCommerz validation failed for ${tran_id}, status: ${validationResponse.status}`);
+                    // Don't override - IPN says success, but log warning
+                }
+            } catch (validationError: any) {
+                console.warn('⚠️ IPN: SSLCommerz validation error:', validationError.message);
+            }
+        }
         
         // ✅ Update the payment status
         const participant = await ExclusiveOfferParticipant.findOneAndUpdate(
@@ -311,9 +299,9 @@ const verifyPayment = catchAsync(async (req, res) => {
         });
     }
 
-    // Wait up to 10s for IPN to process (IPN may arrive slightly before/after user)
+    // Wait up to 15s for IPN to process (IPN may arrive slightly before/after user)
     let participant = null;
-    for (let i = 0; i < 5; i++) {
+    for (let i = 0; i < 8; i++) {
         participant = await ExclusiveOfferParticipant.findOne({ transactionId: tran_id });
         if (participant?.paymentStatus === 'success') break;
         await new Promise((r) => setTimeout(r, 2000)); // wait 2s between retries
@@ -326,6 +314,32 @@ const verifyPayment = catchAsync(async (req, res) => {
             message: 'Transaction not found',
             data: null,
         });
+    }
+
+    // If still not success, try validating with SSLCommerz directly
+    if (participant.paymentStatus !== 'success') {
+        const val_id = participant.sslValidationId;
+        if (val_id) {
+            try {
+                const SSLCommerzPayment = require('sslcommerz-lts');
+                const sslcz = new SSLCommerzPayment(process.env.STORE_ID, process.env.STORE_PASS, true);
+                const validationResponse = await sslcz.validate({ val_id });
+                
+                const isValid = validationResponse.status === 'VALID' || validationResponse.status === 'VALIDATED';
+                
+                if (isValid) {
+                    // Update to success
+                    participant = await ExclusiveOfferParticipant.findOneAndUpdate(
+                        { transactionId: tran_id },
+                        { $set: { paymentStatus: 'success', updatedAt: new Date() } },
+                        { new: true }
+                    );
+                    console.log(`✅ verifyPayment: Updated to success via SSLCommerz validation for ${tran_id}`);
+                }
+            } catch (validationError: any) {
+                console.warn('⚠️ SSLCommerz validation failed in verifyPayment:', validationError.message);
+            }
+        }
     }
 
     if (participant.paymentStatus !== 'success') {

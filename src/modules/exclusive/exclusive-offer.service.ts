@@ -48,36 +48,9 @@ const registerParticipant = async (payload: any) => {
             });
         }
 
-        // 6. ✅ ADD JOB TO QUEUE FOR GOOGLE SHEETS
-        try {
-            // Get batch number for the sheet name
-            let batchNo = 'N/A';
-            if (payload.batchId) {
-                const batch = await ExclusiveBatch.findById(payload.batchId);
-                if (batch) {
-                    batchNo = batch.batchNo?.toString() || 'N/A';
-                }
-            }
-
-            await addToQueue({
-                name: participant.name,
-                phone: participant.phone,
-                whatsapp: participant.whatsapp || '',
-                email: participant.email || '',
-                occupation: participant.occupation || '',
-                courseTitle: 'Voice & Public Speaking Masterclass',
-                offerPrice: participant.price || 199,
-                transactionId: participant.transactionId,
-                paymentStatus: 'pending',
-                batchId: participant.batchId,
-                batchNo: batchNo,
-                addedByAdmin: false,
-            });
-            console.log(`✅ Job added to queue for: ${tran_id}`);
-        } catch (queueError) {
-            console.error('❌ Queue error (non-fatal):', queueError);
-            // Don't throw - registration already succeeded
-        }
+        // 6. ✅ DO NOT add to queue here - payment is still pending
+        // Queue will be added after successful payment via paymentSuccess callback or IPN
+        console.log(`⏭️ Skipping queue add for pending payment: ${tran_id}`);
 
         // 7. Prepare SSLCommerz data
         const sslData = {
@@ -149,39 +122,31 @@ const registerParticipant = async (payload: any) => {
 };
 
 
-// ✅ Send to Google Sheets
+// ✅ Send to Google Sheets via queue (batch-specific sheet)
 const sendToGoogleSheets = async (participant: any) => {
-    const registrationDate = new Date().toLocaleString('en-BD', {
-        timeZone: 'Asia/Dhaka',
-    });
+    // Get batch info for sheet name
+    let batchNo = 'N/A';
+    if (participant.batchId) {
+        const batch = await ExclusiveBatch.findById(participant.batchId);
+        if (batch) {
+            batchNo = batch.batchNo?.toString() || 'N/A';
+        }
+    }
 
-    await appendDataToGoogleSheet(
-        'Exclusive Offer Students',
-        [
-            'Name',
-            'Phone',
-            'WhatsApp',
-            'Email',
-            'Occupation',
-            'Price',
-            'Payment Status',
-            'Added By',
-            'Registered At',
-            'Transaction ID',
-        ],
-        [
-            participant.name || '',
-            participant.phone || '',
-            participant.whatsapp || '',
-            participant.email || '',
-            participant.occupation || '',
-            String(participant.price || 199),
-            participant.paymentStatus || 'success',
-            participant.addedByAdmin ? 'Admin' : 'Student',
-            registrationDate,
-            participant.transactionId || '',
-        ],
-    );
+    await addToQueue({
+        name: participant.name,
+        phone: participant.phone,
+        whatsapp: participant.whatsapp || '',
+        email: participant.email || '',
+        occupation: participant.occupation || '',
+        courseTitle: 'Voice & Public Speaking Masterclass',
+        offerPrice: participant.price || 199,
+        transactionId: participant.transactionId,
+        paymentStatus: participant.paymentStatus || 'success',
+        batchId: participant.batchId,
+        batchNo: batchNo,
+        addedByAdmin: participant.addedByAdmin || false,
+    });
 };
 
 // ✅ Add job to queue for background processing
