@@ -6,10 +6,9 @@ import type { IExclusiveBatch } from './exclusive-batch.model';
 const ACTIVE_BATCH_CACHE_KEY = 'exclusive:active-batch';
 const ACTIVE_BATCH_CACHE_TTL = 30; // seconds
 
-// Public list: hide participants array + whatsapp secret from public endpoints
-// giftDriveLink stays public for gift success page
+// Public: hide all sensitive fields from active - batchNo only for dashboard/DB/sheet
 const PUBLIC_BATCH_SELECT = '-participants';
-const PUBLIC_ACTIVE_SELECT = '-participants -whatsappGroupLink';
+const PUBLIC_ACTIVE_SELECT = '-participants -whatsappGroupLink -giftDriveLink -enrolledCount -batchNo';
 
 const clearActiveBatchCache = async (): Promise<void> => {
     if (!redisClient?.isReady) return;
@@ -73,7 +72,7 @@ const getActiveBatch = async (): Promise<IExclusiveBatch | null> => {
 };
 
 const getActiveBatchPublic = async (): Promise<IExclusiveBatch | null> => {
-    // Public version - hides whatsappGroupLink/giftDriveLink secrets
+    // Public version - hides batchNo, whatsapp, gift, enrolledCount, participants
     try {
         const now = new Date();
         const batch = await ExclusiveBatch.findOne({
