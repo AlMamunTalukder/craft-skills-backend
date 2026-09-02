@@ -6,9 +6,11 @@ import { createExclusiveBatchDto, updateExclusiveBatchDto } from './exclusive-ba
 
 const router = Router();
 
-// Public routes
-router.get('/', exclusiveBatchController.getAllBatches);
+// Public sanitized - no whatsappGroupLink for Ads
 router.get('/active', exclusiveBatchController.getActiveBatch);
+
+// Private - admin only (was public, enumerated all batches)
+router.get('/', auth(['admin']), exclusiveBatchController.getAllBatches);
 
 // 🔐 Admin routes (Protected)
 router.post(

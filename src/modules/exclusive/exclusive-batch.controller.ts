@@ -14,7 +14,7 @@ export const exclusiveBatchController = {
     }),
 
     getActiveBatch: catchAsync(async (req: Request, res: Response) => {
-        const batch = await exclusiveBatchService.getActiveBatch();
+        const batch = await exclusiveBatchService.getActiveBatchPublic();
         if (!batch) {
             return res.status(404).json({
                 success: false,

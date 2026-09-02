@@ -17,7 +17,7 @@ exports.exclusiveBatchController = {
         });
     }),
     getActiveBatch: (0, catchAsync_1.default)(async (req, res) => {
-        const batch = await exclusive_batch_service_1.exclusiveBatchService.getActiveBatch();
+        const batch = await exclusive_batch_service_1.exclusiveBatchService.getActiveBatchPublic();
         if (!batch) {
             return res.status(404).json({
                 success: false,

@@ -10,12 +10,12 @@ const validateRequest_1 = __importDefault(require("../../utils/validateRequest")
 const coursebatch_dto_1 = require("./coursebatch.dto");
 const auth_1 = require("../../middleware/auth");
 const router = (0, express_1.Router)();
-// Add this route before parameterized routes
-router.get('/check/:batchNumber', coursebatch_controller_1.courseBatchController.checkBatchExists);
-// Public routes
-router.get('/', coursebatch_controller_1.courseBatchController.getAllBatches);
+// Public sanitized - no secrets for Ads (secrets hidden in service getActiveBatchPublic)
 router.get('/active', coursebatch_controller_1.courseBatchController.getActiveBatch);
-router.get('/:id', coursebatch_controller_1.courseBatchController.getBatchById);
+router.get('/check/:batchNumber', coursebatch_controller_1.courseBatchController.checkBatchExists);
+// Private - admin only (leaked Batch 39-43 secrets before)
+router.get('/', (0, auth_1.auth)(['admin']), coursebatch_controller_1.courseBatchController.getAllBatches);
+router.get('/:id', (0, auth_1.auth)(['admin']), coursebatch_controller_1.courseBatchController.getBatchById);
 // Protected routes with validation
 router.post('/', (0, auth_1.auth)(['admin']), (0, validateRequest_1.default)(coursebatch_dto_1.createBatchDto), coursebatch_controller_1.courseBatchController.createBatch);
 router.put('/:id', (0, auth_1.auth)(['admin']), (0, validateRequest_1.default)(coursebatch_dto_1.updateBatchDto), coursebatch_controller_1.courseBatchController.updateBatch);

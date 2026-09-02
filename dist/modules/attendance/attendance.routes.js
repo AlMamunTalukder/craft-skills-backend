@@ -6,9 +6,9 @@ const express_1 = require("express");
 const attendance_controller_1 = require("./attendance.controller");
 const auth_1 = require("../../middleware/auth");
 const router = (0, express_1.Router)();
-// Public route for testing
-router.get('/batch-stats-public', attendance_controller_1.attendanceController.getBatchAttendanceStatsPublic); // No auth required
-router.get('/test-auth', attendance_controller_1.attendanceController.testAuth); // Test authentication
+// Private - admin/teacher only (was public)
+router.get('/batch-stats-public', (0, auth_1.auth)(['admin', 'teacher']), attendance_controller_1.attendanceController.getBatchAttendanceStatsPublic);
+router.get('/test-auth', (0, auth_1.auth)(['admin']), attendance_controller_1.attendanceController.testAuth);
 // Admin routes - require authentication
 router.get('/', (0, auth_1.auth)(['admin', 'teacher']), attendance_controller_1.attendanceController.getAllAttendances);
 router.get('/batch-stats', (0, auth_1.auth)(['admin', 'teacher']), attendance_controller_1.attendanceController.getBatchAttendanceStats);

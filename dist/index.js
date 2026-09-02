@@ -67,19 +67,25 @@ if (index_2.default.env === 'production') {
 app.use((0, cookie_parser_1.default)());
 app.use((0, morgan_1.default)('dev'));
 app.use((0, cors_1.default)({
-    origin: [
-        'http://localhost:3000',
-        'http://localhost:5173',
-        'http://localhost:5000',
-        'https://craftskillsbd.com',
-        'https://www.craftskillsbd.com',
-        'https://admin.craftskillsbd.com',
-        'https://server.craftskillsbd.com',
-    ],
+    origin: index_2.default.env === 'production'
+        ? [
+            'https://craftskillsbd.com',
+            'https://www.craftskillsbd.com',
+            'https://admin.craftskillsbd.com',
+            'https://server.craftskillsbd.com',
+        ]
+        : [
+            'http://localhost:3000',
+            'http://localhost:5173',
+            'http://localhost:5000',
+            'https://craftskillsbd.com',
+            'https://www.craftskillsbd.com',
+            'https://admin.craftskillsbd.com',
+            'https://server.craftskillsbd.com',
+        ],
     credentials: true,
     methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
     allowedHeaders: ['Content-Type', 'Authorization', 'Cookie', 'X-Requested-With'],
-    // exposedHeaders: ['set-cookie'],
 }));
 app.use(requestLogger_1.default);
 app.use(express_1.default.json({ limit: '50mb' }));
@@ -109,12 +115,12 @@ const attachRoutes = (sessionMiddleware) => {
     });
     app.use('/api/v1', index_1.default);
     app.get('/api/v1/debug/session', (0, auth_1.auth)(['admin']), (req, res) => {
+        if (index_2.default.env === 'production') {
+            return res.status(404).json({ message: 'Not found' });
+        }
         res.json({
-            sessionId: req.sessionID,
             authenticated: req.isAuthenticated ? req.isAuthenticated() : false,
-            user: req.user || null,
-            cookie: req.headers.cookie,
-            env: index_2.default.env,
+            user: req.user ? { id: req.user._id, role: req.user.role } : null,
             timestamp: new Date().toISOString(),
         });
     });

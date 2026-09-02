@@ -6,10 +6,10 @@ import type { IExclusiveBatch } from './exclusive-batch.model';
 const ACTIVE_BATCH_CACHE_KEY = 'exclusive:active-batch';
 const ACTIVE_BATCH_CACHE_TTL = 30; // seconds
 
-// Public list: the participants ObjectId array is unbounded (it grows with every
-// registration). Never ship it to public list/active endpoints — the dashboard
-// and public site only need the batch metadata.
+// Public list: hide participants array + whatsapp secret from public endpoints
+// giftDriveLink stays public for gift success page
 const PUBLIC_BATCH_SELECT = '-participants';
+const PUBLIC_ACTIVE_SELECT = '-participants -whatsappGroupLink';
 
 const clearActiveBatchCache = async (): Promise<void> => {
     if (!redisClient?.isReady) return;
@@ -33,8 +33,7 @@ const getAllBatches = async (): Promise<IExclusiveBatch[]> => {
 };
 
 const getActiveBatch = async (): Promise<IExclusiveBatch | null> => {
-    // Redis cache (short TTL) absorbs the thundering herd of page loads from
-    // every visitor hitting /exclusive-batches/active. Fail-open to MongoDB.
+    // Private/admin version - includes secret links
     if (redisClient?.isReady) {
         try {
             const cached = await redisClient.get(ACTIVE_BATCH_CACHE_KEY);
@@ -67,6 +66,23 @@ const getActiveBatch = async (): Promise<IExclusiveBatch | null> => {
                 // fail-open: cache write is best-effort
             }
         }
+        return batch as unknown as IExclusiveBatch | null;
+    } catch (error: any) {
+        return null;
+    }
+};
+
+const getActiveBatchPublic = async (): Promise<IExclusiveBatch | null> => {
+    // Public version - hides whatsappGroupLink/giftDriveLink secrets
+    try {
+        const now = new Date();
+        const batch = await ExclusiveBatch.findOne({
+            isActive: true,
+            registrationDeadline: { $gte: now },
+        })
+            .select(PUBLIC_ACTIVE_SELECT)
+            .sort({ date: 1 })
+            .lean();
         return batch as unknown as IExclusiveBatch | null;
     } catch (error: any) {
         return null;
@@ -138,6 +154,7 @@ const changeStatus = async (id: string, isActive: boolean): Promise<IExclusiveBa
 export const exclusiveBatchService = {
     getAllBatches,
     getActiveBatch,
+    getActiveBatchPublic,
     getBatchById,
     createBatch,
     updateBatch,

@@ -11,7 +11,7 @@ const course_dto_1 = require("./course.dto");
 const validateRequest_1 = __importDefault(require("../../utils/validateRequest"));
 const auth_1 = require("../../middleware/auth");
 const router = (0, express_1.Router)();
-// Public routes
+// Public - sanitized catalog for Ads/SEO (writes stay private)
 router.get('/', course_controller_1.courseController.getAllCourses);
 router.get('/:id', course_controller_1.courseController.getCourseById);
 // Protected routes with validation

@@ -5,8 +5,8 @@ import { studentAttendanceController } from './studentAttendance.controller';
 
 const router = Router();
 
-// TEST ROUTE (no auth) - to verify routing works
-router.get('/test', (req, res) => {
+// TEST ROUTE - private admin only
+router.get('/test', auth(['admin']), (req, res) => {
     res.json({
         success: true,
         message: 'Student Attendance API is working!',

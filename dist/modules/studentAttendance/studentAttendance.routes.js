@@ -6,8 +6,8 @@ const express_1 = require("express");
 const auth_1 = require("../../middleware/auth");
 const studentAttendance_controller_1 = require("./studentAttendance.controller");
 const router = (0, express_1.Router)();
-// TEST ROUTE (no auth) - to verify routing works
-router.get('/test', (req, res) => {
+// TEST ROUTE - private admin only
+router.get('/test', (0, auth_1.auth)(['admin']), (req, res) => {
     res.json({
         success: true,
         message: 'Student Attendance API is working!',

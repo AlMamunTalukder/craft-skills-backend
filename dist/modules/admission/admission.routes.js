@@ -26,6 +26,9 @@ router.post('/register', (0, validateRequest_1.default)(admission_dto_1.createAd
 // Protected routes (admin access)
 router.get('/', (0, auth_1.auth)(['admin']), admission_controller_1.admissionController.getAllAdmissions);
 router.get('/batch/:batchId', (0, auth_1.auth)(['admin']), admission_controller_1.admissionController.getAdmissionsByBatchId);
+// Student routes - must be BEFORE /:id to avoid shadowing
+router.get('/student/result', (0, auth_1.auth)(['student']), admission_controller_1.admissionController.getStudentAdmissionResult);
+router.get('/student/all-results', (0, auth_1.auth)(['student']), admission_controller_1.admissionController.getStudentAllAdmissionResults);
 // Parameterized routes
 router.get('/:id', (0, auth_1.auth)(['admin']), admission_controller_1.admissionController.getAdmissionById);
 router.put('/:id', (0, auth_1.auth)(['admin']), (0, validateRequest_1.default)(admission_dto_1.updateAdmissionDto), admission_controller_1.admissionController.updateAdmission);
@@ -34,9 +37,6 @@ router.put('/:id/payment-status', (0, auth_1.auth)(['admin']), admission_control
 router.delete('/:id', (0, auth_1.auth)(['admin']), admission_controller_1.admissionController.deleteAdmission);
 // Result routes
 router.put('/:id/result', (0, auth_1.auth)(['admin', 'teacher']), admission_controller_1.admissionController.updateAdmissionResult);
-// Student routes
-router.get('/student/result', (0, auth_1.auth)(['student']), admission_controller_1.admissionController.getStudentAdmissionResult);
-router.get('/student/all-results', (0, auth_1.auth)(['student']), admission_controller_1.admissionController.getStudentAllAdmissionResults);
 // Admin direct creation
 router.post('/admin/register', (0, auth_1.auth)(['admin']), admission_controller_1.admissionController.createAdmissionDirect);
 exports.AdmissionRoutes = router;

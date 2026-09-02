@@ -36,19 +36,26 @@ app.use(morgan('dev'));
 
 app.use(
     cors({
-        origin: [
-            'http://localhost:3000',
-            'http://localhost:5173',
-            'http://localhost:5000',
-            'https://craftskillsbd.com',
-            'https://www.craftskillsbd.com',
-            'https://admin.craftskillsbd.com',
-            'https://server.craftskillsbd.com',
-        ],
+        origin:
+            config.env === 'production'
+                ? [
+                      'https://craftskillsbd.com',
+                      'https://www.craftskillsbd.com',
+                      'https://admin.craftskillsbd.com',
+                      'https://server.craftskillsbd.com',
+                  ]
+                : [
+                      'http://localhost:3000',
+                      'http://localhost:5173',
+                      'http://localhost:5000',
+                      'https://craftskillsbd.com',
+                      'https://www.craftskillsbd.com',
+                      'https://admin.craftskillsbd.com',
+                      'https://server.craftskillsbd.com',
+                  ],
         credentials: true,
         methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
         allowedHeaders: ['Content-Type', 'Authorization', 'Cookie', 'X-Requested-With'],
-        // exposedHeaders: ['set-cookie'],
     }),
 );
 
@@ -89,12 +96,12 @@ const attachRoutes = (sessionMiddleware: ReturnType<typeof session>) => {
     app.use('/api/v1', routes);
 
     app.get('/api/v1/debug/session', auth(['admin']), (req, res) => {
+        if (config.env === 'production') {
+            return res.status(404).json({ message: 'Not found' });
+        }
         res.json({
-            sessionId: req.sessionID,
             authenticated: req.isAuthenticated ? req.isAuthenticated() : false,
-            user: req.user || null,
-            cookie: req.headers.cookie,
-            env: config.env,
+            user: req.user ? { id: (req.user as any)._id, role: (req.user as any).role } : null,
             timestamp: new Date().toISOString(),
         });
     });

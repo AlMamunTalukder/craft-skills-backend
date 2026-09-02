@@ -30,6 +30,14 @@ router.post('/register', validateRequest(createAdmissionDto), admissionControlle
 router.get('/', auth(['admin']), admissionController.getAllAdmissions);
 router.get('/batch/:batchId', auth(['admin']), admissionController.getAdmissionsByBatchId);
 
+// Student routes - must be BEFORE /:id to avoid shadowing
+router.get('/student/result', auth(['student']), admissionController.getStudentAdmissionResult);
+router.get(
+    '/student/all-results',
+    auth(['student']),
+    admissionController.getStudentAllAdmissionResults,
+);
+
 // Parameterized routes
 router.get('/:id', auth(['admin']), admissionController.getAdmissionById);
 router.put('/:id', auth(['admin']), validateRequest(updateAdmissionDto), admissionController.updateAdmission);
@@ -39,14 +47,6 @@ router.delete('/:id', auth(['admin']), admissionController.deleteAdmission);
 
 // Result routes
 router.put('/:id/result', auth(['admin', 'teacher']), admissionController.updateAdmissionResult);
-
-// Student routes
-router.get('/student/result', auth(['student']), admissionController.getStudentAdmissionResult);
-router.get(
-    '/student/all-results',
-    auth(['student']),
-    admissionController.getStudentAllAdmissionResults,
-);
 
 // Admin direct creation
 router.post('/admin/register', auth(['admin']), admissionController.createAdmissionDirect);

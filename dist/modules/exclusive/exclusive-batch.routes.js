@@ -10,9 +10,10 @@ const validateRequest_1 = __importDefault(require("../../utils/validateRequest")
 const auth_1 = require("../../middleware/auth");
 const exclusive_batch_dto_1 = require("./exclusive-batch.dto");
 const router = (0, express_1.Router)();
-// Public routes
-router.get('/', exclusive_batch_controller_1.exclusiveBatchController.getAllBatches);
+// Public sanitized - no whatsappGroupLink for Ads
 router.get('/active', exclusive_batch_controller_1.exclusiveBatchController.getActiveBatch);
+// Private - admin only (was public, enumerated all batches)
+router.get('/', (0, auth_1.auth)(['admin']), exclusive_batch_controller_1.exclusiveBatchController.getAllBatches);
 // 🔐 Admin routes (Protected)
 router.post('/', (0, auth_1.auth)(['admin']), (0, validateRequest_1.default)(exclusive_batch_dto_1.createExclusiveBatchDto), exclusive_batch_controller_1.exclusiveBatchController.createBatch);
 router.get('/:id', (0, auth_1.auth)(['admin']), exclusive_batch_controller_1.exclusiveBatchController.getBatchById);

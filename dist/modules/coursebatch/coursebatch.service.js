@@ -16,6 +16,17 @@ const toResponseDto = (batch) => ({
     createdAt: batch.createdAt,
     updatedAt: batch.updatedAt,
 });
+const toPublicResponseDto = (batch) => ({
+    _id: batch._id.toString(),
+    name: batch.name,
+    code: batch.code,
+    description: batch.description || '',
+    registrationStart: batch.registrationStart,
+    registrationEnd: batch.registrationEnd,
+    isActive: batch.isActive,
+    createdAt: batch.createdAt,
+    updatedAt: batch.updatedAt,
+});
 // Get all batches
 const getAllBatches = async () => {
     const batches = await coursebatch_model_1.CourseBatch.find()
@@ -79,12 +90,21 @@ const changeStatus = async (id, isActive) => {
         throw new Error('Batch not found');
     return toResponseDto(batch);
 };
-// Get active batch
+// Get active batch - PRIVATE (admin with secrets)
 const getActiveBatch = async () => {
     const batch = await coursebatch_model_1.CourseBatch.findOne({ isActive: true }).lean();
     if (!batch)
         return null;
     return toResponseDto(batch);
+};
+// Get active batch - PUBLIC (no secrets)
+const getActiveBatchPublic = async () => {
+    const batch = await coursebatch_model_1.CourseBatch.findOne({ isActive: true })
+        .select('name code description registrationStart registrationEnd isActive createdAt updatedAt')
+        .lean();
+    if (!batch)
+        return null;
+    return toPublicResponseDto(batch);
 };
 const checkBatchExists = async (batchNumber) => {
     try {
@@ -107,5 +127,6 @@ exports.courseBatchService = {
     deleteBatch,
     changeStatus,
     getActiveBatch,
+    getActiveBatchPublic,
     checkBatchExists,
 };

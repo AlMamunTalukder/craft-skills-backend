@@ -17,6 +17,18 @@ interface CourseBatchResponse {
     updatedAt: Date;
 }
 
+interface CourseBatchPublicResponse {
+    _id: string;
+    name: string;
+    code: string;
+    description: string;
+    registrationStart: Date;
+    registrationEnd: Date;
+    isActive: boolean;
+    createdAt: Date;
+    updatedAt: Date;
+}
+
 const toResponseDto = (batch: any): CourseBatchResponse => ({
     _id: batch._id.toString(),
     name: batch.name,
@@ -27,6 +39,18 @@ const toResponseDto = (batch: any): CourseBatchResponse => ({
     isActive: batch.isActive,
     facebookSecretGroup: batch.facebookSecretGroup || '',
     messengerSecretGroup: batch.messengerSecretGroup || '',
+    createdAt: batch.createdAt,
+    updatedAt: batch.updatedAt,
+});
+
+const toPublicResponseDto = (batch: any): CourseBatchPublicResponse => ({
+    _id: batch._id.toString(),
+    name: batch.name,
+    code: batch.code,
+    description: batch.description || '',
+    registrationStart: batch.registrationStart,
+    registrationEnd: batch.registrationEnd,
+    isActive: batch.isActive,
     createdAt: batch.createdAt,
     updatedAt: batch.updatedAt,
 });
@@ -106,12 +130,22 @@ const changeStatus = async (id: string, isActive: boolean): Promise<CourseBatchR
     return toResponseDto(batch);
 };
 
-// Get active batch
+// Get active batch - PRIVATE (admin with secrets)
 const getActiveBatch = async (): Promise<CourseBatchResponse | null> => {
     const batch = await CourseBatch.findOne({ isActive: true }).lean();
 
     if (!batch) return null;
     return toResponseDto(batch);
+};
+
+// Get active batch - PUBLIC (no secrets)
+const getActiveBatchPublic = async (): Promise<CourseBatchPublicResponse | null> => {
+    const batch = await CourseBatch.findOne({ isActive: true })
+        .select('name code description registrationStart registrationEnd isActive createdAt updatedAt')
+        .lean();
+
+    if (!batch) return null;
+    return toPublicResponseDto(batch);
 };
 
 const checkBatchExists = async (batchNumber: string): Promise<boolean> => {
@@ -136,5 +170,6 @@ export const courseBatchService = {
     deleteBatch,
     changeStatus,
     getActiveBatch,
+    getActiveBatchPublic,
     checkBatchExists,
 };

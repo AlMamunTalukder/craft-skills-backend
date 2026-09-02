@@ -7,7 +7,7 @@ import { auth } from 'src/middleware/auth';
 
 const router = Router();
 
-// Public routes
+// Public - sanitized catalog for Ads/SEO (writes stay private)
 router.get('/', courseController.getAllCourses);
 router.get('/:id', courseController.getCourseById);
 

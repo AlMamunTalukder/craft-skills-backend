@@ -146,7 +146,7 @@ export const courseBatchController = {
 
     getActiveBatch: async (req: Request, res: Response) => {
         try {
-            const batch = await courseBatchService.getActiveBatch();
+            const batch = await courseBatchService.getActiveBatchPublic();
             res.json({
                 success: true,
                 message: 'Active batch retrieved successfully',

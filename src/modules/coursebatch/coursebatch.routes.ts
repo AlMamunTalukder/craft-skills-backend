@@ -6,13 +6,13 @@ import { auth } from 'src/middleware/auth';
 
 const router = Router();
 
-// Add this route before parameterized routes
+// Public sanitized - no secrets for Ads (secrets hidden in service getActiveBatchPublic)
+router.get('/active', courseBatchController.getActiveBatch);
 router.get('/check/:batchNumber', courseBatchController.checkBatchExists);
 
-// Public routes
-router.get('/', courseBatchController.getAllBatches);
-router.get('/active', courseBatchController.getActiveBatch);
-router.get('/:id', courseBatchController.getBatchById);
+// Private - admin only (leaked Batch 39-43 secrets before)
+router.get('/', auth(['admin']), courseBatchController.getAllBatches);
+router.get('/:id', auth(['admin']), courseBatchController.getBatchById);
 
 // Protected routes with validation
 router.post('/', auth(['admin']), validateRequest(createBatchDto), courseBatchController.createBatch);

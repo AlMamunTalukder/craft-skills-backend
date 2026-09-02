@@ -9,10 +9,10 @@ const redis_1 = __importDefault(require("../../config/redis"));
 const exclusive_batch_model_1 = require("./exclusive-batch.model");
 const ACTIVE_BATCH_CACHE_KEY = 'exclusive:active-batch';
 const ACTIVE_BATCH_CACHE_TTL = 30; // seconds
-// Public list: the participants ObjectId array is unbounded (it grows with every
-// registration). Never ship it to public list/active endpoints — the dashboard
-// and public site only need the batch metadata.
+// Public list: hide participants array + whatsapp secret from public endpoints
+// giftDriveLink stays public for gift success page
 const PUBLIC_BATCH_SELECT = '-participants';
+const PUBLIC_ACTIVE_SELECT = '-participants -whatsappGroupLink';
 const clearActiveBatchCache = async () => {
     if (!redis_1.default?.isReady)
         return;
@@ -36,8 +36,7 @@ const getAllBatches = async () => {
     }
 };
 const getActiveBatch = async () => {
-    // Redis cache (short TTL) absorbs the thundering herd of page loads from
-    // every visitor hitting /exclusive-batches/active. Fail-open to MongoDB.
+    // Private/admin version - includes secret links
     if (redis_1.default?.isReady) {
         try {
             const cached = await redis_1.default.get(ACTIVE_BATCH_CACHE_KEY);
@@ -66,6 +65,23 @@ const getActiveBatch = async () => {
                 // fail-open: cache write is best-effort
             }
         }
+        return batch;
+    }
+    catch (error) {
+        return null;
+    }
+};
+const getActiveBatchPublic = async () => {
+    // Public version - hides whatsappGroupLink/giftDriveLink secrets
+    try {
+        const now = new Date();
+        const batch = await exclusive_batch_model_1.ExclusiveBatch.findOne({
+            isActive: true,
+            registrationDeadline: { $gte: now },
+        })
+            .select(PUBLIC_ACTIVE_SELECT)
+            .sort({ date: 1 })
+            .lean();
         return batch;
     }
     catch (error) {
@@ -131,6 +147,7 @@ const changeStatus = async (id, isActive) => {
 exports.exclusiveBatchService = {
     getAllBatches,
     getActiveBatch,
+    getActiveBatchPublic,
     getBatchById,
     createBatch,
     updateBatch,
