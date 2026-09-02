@@ -319,4 +319,42 @@ exports.admissionPaymentController = {
         }
         res.status(200).send('OK');
     },
+    verifyPayment: async (req, res) => {
+        try {
+            const tran_id = req.query.tran_id || req.query.tranId;
+            if (!tran_id) {
+                return res.status(400).json({ success: false, message: 'tran_id required', data: null });
+            }
+            const mongoose = require('mongoose');
+            const collection = mongoose.connection.db.collection('admissions');
+            let admission = null;
+            for (let i = 0; i < 8; i++) {
+                admission = await collection.findOne({ transactionId: tran_id });
+                if (admission?.paymentStatus === 'paid')
+                    break;
+                await new Promise((r) => setTimeout(r, 2000));
+            }
+            if (!admission) {
+                return res.status(404).json({ success: false, message: 'Transaction not found', data: null });
+            }
+            if (admission.paymentStatus !== 'paid') {
+                return res.status(400).json({ success: false, message: 'Payment not completed', data: null });
+            }
+            let batch = null;
+            if (admission.batchId) {
+                batch = await coursebatch_model_1.CourseBatch.findById(admission.batchId).select('facebookSecretGroup messengerSecretGroup name code').lean();
+            }
+            return res.json({
+                success: true,
+                data: {
+                    admission: { _id: admission._id, name: admission.name, phone: admission.phone, batchId: admission.batchId },
+                    facebookSecretGroup: batch?.facebookSecretGroup || null,
+                    messengerSecretGroup: batch?.messengerSecretGroup || null,
+                },
+            });
+        }
+        catch (e) {
+            return res.status(500).json({ success: false, message: e.message, data: null });
+        }
+    },
 };

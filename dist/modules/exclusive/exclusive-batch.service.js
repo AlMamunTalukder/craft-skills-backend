@@ -9,7 +9,7 @@ const redis_1 = __importDefault(require("../../config/redis"));
 const exclusive_batch_model_1 = require("./exclusive-batch.model");
 const ACTIVE_BATCH_CACHE_KEY = 'exclusive:active-batch';
 const ACTIVE_BATCH_CACHE_TTL = 30; // seconds
-// Public: hide all sensitive fields from active - batchNo only for dashboard/DB/sheet
+// Public: hide all secrets - whatsapp/gift/participants/count/batchNo only after payment verify
 const PUBLIC_BATCH_SELECT = '-participants';
 const PUBLIC_ACTIVE_SELECT = '-participants -whatsappGroupLink -giftDriveLink -enrolledCount -batchNo';
 const clearActiveBatchCache = async () => {

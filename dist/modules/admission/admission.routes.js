@@ -20,6 +20,7 @@ router.post('/payment/success', admission_payment_controller_1.admissionPaymentC
 router.post('/payment/fail', admission_payment_controller_1.admissionPaymentController.paymentFail);
 router.post('/payment/cancel', admission_payment_controller_1.admissionPaymentController.paymentCancel);
 router.post('/payment/ipn', admission_payment_controller_1.admissionPaymentController.ipn);
+router.get('/verify-payment', admission_payment_controller_1.admissionPaymentController.verifyPayment);
 // ========== Existing routes ==========
 // Public route for student registration (direct, no payment)
 router.post('/register', (0, validateRequest_1.default)(admission_dto_1.createAdmissionDto), admission_controller_1.admissionController.createAdmission);

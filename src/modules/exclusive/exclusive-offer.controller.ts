@@ -351,7 +351,13 @@ const verifyPayment = catchAsync(async (req, res) => {
         });
     }
 
-    sendResponse(res, { success: true, statusCode: 200, data: participant });
+    // Fetch batch to return secret whatsapp link only after verified payment
+    let batchWhatsApp: string | null = null;
+    if (participant.batchId) {
+        const batch = await ExclusiveBatch.findById(participant.batchId).select('whatsappGroupLink batchNo title').lean() as any;
+        batchWhatsApp = batch?.whatsappGroupLink || null;
+    }
+    sendResponse(res, { success: true, statusCode: 200, data: { participant, whatsappGroupLink: batchWhatsApp } });
 });
 
 // ✅ GET single participant
