@@ -12,6 +12,9 @@ import { auth } from 'src/middleware/auth';
 
 const Schedulerouter = Router();
 
+// Public read: single active schedule document for homepage
+Schedulerouter.get('/', getSchedule);
+
 // Get all schedules (list view) - private admin
 Schedulerouter.get('/all', auth(['admin']), getAllSchedules);
 
@@ -27,9 +30,8 @@ Schedulerouter.put('/:id', auth(['admin']), updateSchedule);
 // Delete schedule
 Schedulerouter.delete('/:id', auth(['admin']), deleteSchedule);
 
-// Old routes (for backward compatibility) - private admin
-Schedulerouter.get('/', auth(['admin']), getSchedule); // Single document
-Schedulerouter.put('/', auth(['admin']), updateSchedule); // Update single document
+// Backward-compatible admin update shape
+Schedulerouter.put('/', auth(['admin']), updateSchedule);
 
 Schedulerouter.put('/:id/status', auth(['admin']), updateScheduleStatus);
 
