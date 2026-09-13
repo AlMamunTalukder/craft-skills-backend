@@ -176,9 +176,6 @@ const paymentCancel = (0, catchAsync_1.default)(async (req, res) => {
     return res.redirect(`${FRONTEND_URL}/exclusive/cancel`);
 });
 const ipn = async (req, res) => {
-    console.log('📨 IPN RECEIVED');
-    console.log('📨 Headers:', req.headers);
-    console.log('📨 Body:', JSON.stringify(req.body, null, 2));
     const { tran_id, status, val_id } = req.body;
     console.log('📨 IPN Data:', { tran_id, status, val_id });
     // ✅ Always respond 200 immediately
@@ -190,7 +187,6 @@ const ipn = async (req, res) => {
     try {
         const callbackStatus = status || req.body.status;
         const isSuccess = callbackStatus === 'VALID' || callbackStatus === 'VALIDATED';
-        console.log(`📨 Transaction ${tran_id} is ${isSuccess ? 'SUCCESS' : 'FAILED'}`);
         // ✅ If success, also validate with SSLCommerz for extra safety
         if (isSuccess && val_id) {
             try {
@@ -219,7 +215,6 @@ const ipn = async (req, res) => {
             console.log(`❌ No participant found for ${tran_id}`);
             return;
         }
-        console.log(`✅ IPN: DB updated for ${tran_id} to ${participant.paymentStatus}`);
         // ✅ If success, add job to queue for Google Sheets
         if (isSuccess) {
             // Get batch info
@@ -243,7 +238,6 @@ const ipn = async (req, res) => {
                 batchId: participant.batchId,
                 batchNo: batchNo,
             });
-            console.log(`✅ Job added to queue for ${tran_id}`);
         }
     }
     catch (e) {

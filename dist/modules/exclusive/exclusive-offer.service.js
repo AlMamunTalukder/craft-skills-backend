@@ -48,7 +48,7 @@ const registerParticipant = async (payload) => {
         }
         // 6. ✅ DO NOT add to queue here - payment is still pending
         // Queue will be added after successful payment via paymentSuccess callback or IPN
-        console.log(`⏭️ Skipping queue add for pending payment: ${tran_id}`);
+        // console.log(`⏭️ Skipping queue add for pending payment: ${tran_id}`);
         // 7. Prepare SSLCommerz data
         const sslData = {
             total_amount: price,

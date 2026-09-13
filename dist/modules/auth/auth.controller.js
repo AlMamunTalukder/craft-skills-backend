@@ -18,10 +18,6 @@ const register = (0, catchAsync_1.default)(async (req, res) => {
     });
 });
 const login = (0, catchAsync_1.default)((req, res, next) => {
-    console.log('🔐 ===== LOGIN ATTEMPT =====');
-    console.log('   Identifier:', req.body.identifier);
-    console.log('   Website:', req.body.website);
-    console.log('   Password provided:', !!req.body.password);
     // Sanitize identifier if it looks like a phone number
     let identifier = req.body.identifier;
     const isEmail = identifier.includes('@');

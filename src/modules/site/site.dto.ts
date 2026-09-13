@@ -45,10 +45,10 @@ export const siteDto = z.object({
     admissionHeaderTitle: z.string().optional(),
     admissionHeaderDescription: z.string().optional(),
     admissionDeadline: z.coerce.date().optional(),
-    totalsTeachers: z.number().optional(),
-    totalCourses: z.number().optional(),
-    totalBatches: z.number().optional(),
-    successRate: z.number().optional(),
+    totalsTeachers: z.coerce.number().optional(),
+    totalCourses: z.coerce.number().optional(),
+    totalBatches: z.coerce.number().optional(),
+    successRate: z.coerce.number().min(0).max(100).optional(),
     menuSettings: menuSettingsDto.optional(),
 });
 

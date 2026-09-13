@@ -42,9 +42,9 @@ exports.siteDto = zod_1.z.object({
     admissionHeaderTitle: zod_1.z.string().optional(),
     admissionHeaderDescription: zod_1.z.string().optional(),
     admissionDeadline: zod_1.z.coerce.date().optional(),
-    totalsTeachers: zod_1.z.number().optional(),
-    totalCourses: zod_1.z.number().optional(),
-    totalBatches: zod_1.z.number().optional(),
-    successRate: zod_1.z.number().optional(),
+    totalsTeachers: zod_1.z.coerce.number().optional(),
+    totalCourses: zod_1.z.coerce.number().optional(),
+    totalBatches: zod_1.z.coerce.number().optional(),
+    successRate: zod_1.z.coerce.number().min(0).max(100).optional(),
     menuSettings: exports.menuSettingsDto.optional(),
 });
