@@ -8,8 +8,8 @@ const ExclusiveOfferParticipantSchema = new Schema<IExclusiveOfferParticipant>(
         phone: { type: String, required: true, trim: true },
         whatsapp: { type: String, trim: true },
         occupation: { type: String, trim: true },
-        price: { type: Number, default: 199 },
-        paymentStatus: { type: String, enum: ['pending', 'success', 'failed'], default: 'pending' },
+        price: { type: Number, default: 299 },
+        paymentStatus: { type: String, enum: ['pending', 'success', 'failed', 'cancelled'], default: 'pending' },
         paymentMethod: { type: String, default: 'sslcommerz' },
         transactionId: {
             type: String,
@@ -25,6 +25,8 @@ const ExclusiveOfferParticipantSchema = new Schema<IExclusiveOfferParticipant>(
         },
         // ✅ Prevents duplicate Google Sheet rows per transaction
         sheetSynced: { type: Boolean, default: false },
+        // ✅ Prevents duplicate Failed-sheet rows per transaction
+        failedSheetSynced: { type: Boolean, default: false },
     },
     { timestamps: true, collection: 'exclusive_offer_participants' },
 );
@@ -33,6 +35,7 @@ ExclusiveOfferParticipantSchema.index({ createdAt: -1 });
 ExclusiveOfferParticipantSchema.index({ batchId: 1 });
 ExclusiveOfferParticipantSchema.index({ transactionId: 1 }); // ✅ Kills collection scans on payment lookups
 ExclusiveOfferParticipantSchema.index({ sheetSynced: 1 });
+ExclusiveOfferParticipantSchema.index({ failedSheetSynced: 1 });
 
 export const ExclusiveOfferParticipant =
     models.ExclusiveOfferParticipant ||

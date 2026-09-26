@@ -33,6 +33,26 @@ const exclusiveOfferWorker = new Worker(
         const { participantData } = job.data;
         logger.info(participantData, '📦 Received participantData');
 
+        const incomingStatus = (participantData.paymentStatus || 'success').toLowerCase();
+        const isIncomingFailed = incomingStatus === 'failed' || incomingStatus === 'cancelled';
+
+        // 🛡️ Success is terminal — a late failed job must not downgrade a paid customer
+        // or write them into the Failed sheet.
+        if (isIncomingFailed && participantData.transactionId) {
+            const existing = await ExclusiveOfferParticipant.findOne(
+                { transactionId: participantData.transactionId },
+            )
+                .select('paymentStatus')
+                .lean();
+            if ((existing as any)?.paymentStatus === 'success') {
+                logger.warn(
+                    { transactionId: participantData.transactionId },
+                    '🛡️ Skipping failed-sheet sync: transaction already succeeded',
+                );
+                return existing;
+            }
+        }
+
         const cleanPhone = sanitizePhoneNumber(participantData.phone) || participantData.phone;
 
         const session = await mongoose.startSession();
@@ -143,7 +163,7 @@ const exclusiveOfferWorker = new Worker(
             logger.info(`📋 Final batch: ${batchNo} - ${batchTitle}`);
 
             // ============================
-            // GOOGLE SHEET - CREATE NEW SHEET
+            // GOOGLE SHEET - SUCCESS vs FAILED (separate tabs)
             // ============================
             const registrationDate = new Date().toLocaleString('en-BD', {
                 timeZone: 'Asia/Dhaka',
@@ -155,10 +175,25 @@ const exclusiveOfferWorker = new Worker(
                 hour12: true,
             });
 
-            // ✅ Sheet name with batch number
-            const sheetTitle = `Exclusive Offer Course Batch: ${batchNo}`;
+            const rawStatus = (participantData.paymentStatus || (participant as any)?.paymentStatus || 'pending').toLowerCase();
+            const isSuccess = rawStatus === 'success';
+            const isFailed = rawStatus === 'failed' || rawStatus === 'cancelled';
 
-            logger.info(`📤 Creating/Updating Google Sheet: ${sheetTitle}`);
+            // ⏭️ Don't sync pending payments to any sheet
+            if (!isSuccess && !isFailed) {
+                logger.info(
+                    { transactionId: participantData.transactionId, paymentStatus: rawStatus },
+                    '⏭️ Skipping Google Sheet append (payment pending)',
+                );
+                return participant;
+            }
+
+            // ✅ Separate tabs: success and failed never mix
+            const sheetTitle = isSuccess
+                ? `Exclusive Offer Course Batch: ${batchNo}`
+                : `Exclusive Offer Course Batch: ${batchNo} - Failed`;
+
+            logger.info(`📤 Creating/Updating Google Sheet: ${sheetTitle} (status=${rawStatus})`);
 
             const headers = [
                 'Name',
@@ -181,33 +216,24 @@ const exclusiveOfferWorker = new Worker(
                 participant.email || participantData.email || '',
                 participant.occupation || participantData.occupation || '',
                 participant.courseTitle || batchTitle || 'Voice & Public Speaking Masterclass',
-                String(participant.offerPrice || participantData.offerPrice || 199),
+                String(participant.offerPrice || participantData.offerPrice || 299),
                 participantData.transactionId || '',
-                participantData.paymentStatus || 'success',
+                rawStatus,
                 registrationDate,
                 participantData.addedByAdmin ? 'Yes' : 'No',
             ];
 
-            // ✅ Only sync to Google Sheets if payment is successful
-            const paymentStatus = participantData.paymentStatus || 'pending';
-            if (paymentStatus !== 'success') {
-                logger.info(
-                    { transactionId: participantData.transactionId, paymentStatus },
-                    '⏭️ Skipping Google Sheet append (payment not successful)',
-                );
-                return participant;
-            }
-
-            // ✅ Check if already synced
+            // ✅ Per-status idempotency flag so success + failed sync independently
+            const syncField = isSuccess ? 'sheetSynced' : 'failedSheetSynced';
             const claim = await ExclusiveOfferParticipant.updateOne(
-                { transactionId: participantData.transactionId, sheetSynced: { $ne: true } },
-                { $set: { sheetSynced: true } },
+                { transactionId: participantData.transactionId, [syncField]: { $ne: true } },
+                { $set: { [syncField]: true } },
             );
 
             if (claim.modifiedCount === 0) {
                 logger.info(
-                    { transactionId: participantData.transactionId },
-                    '⏭️ Skipping Google Sheet append (already synced)',
+                    { transactionId: participantData.transactionId, status: rawStatus },
+                    `⏭️ Skipping Google Sheet append (already synced to ${sheetTitle})`,
                 );
                 return participant;
             }
@@ -224,7 +250,7 @@ const exclusiveOfferWorker = new Worker(
                 logger.error({ error: error?.message || error }, '❌ Failed to append to sheet');
                 await ExclusiveOfferParticipant.updateOne(
                     { transactionId: participantData.transactionId },
-                    { $set: { sheetSynced: false } },
+                    { $set: { [syncField]: false } },
                 ).catch(() => undefined);
                 throw error;
             }

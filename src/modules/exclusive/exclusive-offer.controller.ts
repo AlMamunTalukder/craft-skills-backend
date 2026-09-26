@@ -106,7 +106,7 @@ const paymentSuccess = async (req: any, res: any) => {
                         sslValidationId: val_id,
                         paymentMethod: card_type || participant.paymentMethod || 'sslcommerz',
                         updatedAt: new Date(),
-                        price: extraData?.price || participant.price || 199,
+                        price: extraData?.price || participant.price || 299,
                         name: extraData?.name || participant.name,
                         whatsapp: extraData?.whatsapp || participant.whatsapp || '',
                         occupation: extraData?.occupation || participant.occupation || '',
@@ -150,7 +150,7 @@ const paymentSuccess = async (req: any, res: any) => {
                 email: updatedParticipant.email || '',
                 occupation: updatedParticipant.occupation || '',
                 courseTitle: 'Voice & Public Speaking Masterclass',
-                offerPrice: (updatedParticipant as any).price || 199,
+                offerPrice: (updatedParticipant as any).price || 299,
                 transactionId: lookupTranId,
                 paymentStatus: 'success',
                 batchId: participant.batchId || extraData?.batchId,
@@ -163,7 +163,7 @@ const paymentSuccess = async (req: any, res: any) => {
         // ✅ STEP 10: Always redirect to success
         const params = new URLSearchParams({
             name: updatedParticipant.name || '',
-            amount: String((updatedParticipant as any).price || amount || 199),
+            amount: String((updatedParticipant as any).price || amount || 299),
             phone: updatedParticipant.phone || '',
             email: updatedParticipant.email || '',
             tran_id: lookupTranId,
@@ -182,10 +182,35 @@ const paymentFail = catchAsync(async (req, res) => {
     const tran_id = req.body.tran_id || req.body.value_a;
     console.log('❌ Payment failed for transaction:', tran_id);
     if (tran_id) {
-        await ExclusiveOfferParticipant.findOneAndUpdate(
-            { transactionId: tran_id },
+        // 🛡️ Success is terminal — never downgrade a paid customer to failed
+        const participant = await ExclusiveOfferParticipant.findOneAndUpdate(
+            { transactionId: tran_id, paymentStatus: { $ne: 'success' } },
             { paymentStatus: 'failed' },
+            { new: true },
         );
+        if (!participant) {
+            console.log(`⏭️ Skipping failed queue for ${tran_id} (not found or already succeeded)`);
+        }
+        // ✅ Queue failed job for separate Failed Google Sheet (never fatal)
+        if (participant) {
+            try {
+                await exclusiveOfferService.addToQueue({
+                    name: participant.name,
+                    phone: participant.phone,
+                    whatsapp: (participant as any).whatsapp || '',
+                    email: (participant as any).email || '',
+                    occupation: (participant as any).occupation || '',
+                    courseTitle: 'Voice & Public Speaking Masterclass',
+                    offerPrice: (participant as any).price || 299,
+                    transactionId: tran_id,
+                    paymentStatus: 'failed',
+                    batchId: participant.batchId,
+                });
+                console.log('✅ Failed job added to queue');
+            } catch (queueError) {
+                console.error('❌ Failed-queue error (non-fatal):', queueError);
+            }
+        }
     }
     return res.redirect(`${FRONTEND_URL}/exclusive/fail`);
 });
@@ -193,6 +218,37 @@ const paymentFail = catchAsync(async (req, res) => {
 const paymentCancel = catchAsync(async (req, res) => {
     const tran_id = req.body.tran_id || req.body.value_a;
     console.log('❌ Payment cancelled for transaction:', tran_id);
+    if (tran_id) {
+        // 🛡️ Success is terminal — never downgrade a paid customer to cancelled
+        const participant = await ExclusiveOfferParticipant.findOneAndUpdate(
+            { transactionId: tran_id, paymentStatus: { $ne: 'success' } },
+            { paymentStatus: 'cancelled' },
+            { new: true },
+        );
+        if (!participant) {
+            console.log(`⏭️ Skipping cancelled queue for ${tran_id} (not found or already succeeded)`);
+        }
+        // ✅ Queue cancelled job for separate Failed Google Sheet (never fatal)
+        if (participant) {
+            try {
+                await exclusiveOfferService.addToQueue({
+                    name: participant.name,
+                    phone: participant.phone,
+                    whatsapp: (participant as any).whatsapp || '',
+                    email: (participant as any).email || '',
+                    occupation: (participant as any).occupation || '',
+                    courseTitle: 'Voice & Public Speaking Masterclass',
+                    offerPrice: (participant as any).price || 299,
+                    transactionId: tran_id,
+                    paymentStatus: 'cancelled',
+                    batchId: participant.batchId,
+                });
+                console.log('✅ Cancelled job added to queue');
+            } catch (queueError) {
+                console.error('❌ Cancelled-queue error (non-fatal):', queueError);
+            }
+        }
+    }
     return res.redirect(`${FRONTEND_URL}/exclusive/cancel`);
 });
 
@@ -232,6 +288,17 @@ const ipn = async (req: any, res: any) => {
             }
         }
         
+        // 🛡️ Success is terminal — a late failed IPN must not downgrade a paid customer
+        const existing = await ExclusiveOfferParticipant.findOne({ transactionId: tran_id });
+        if (!existing) {
+            console.log(`❌ No participant found for ${tran_id}`);
+            return;
+        }
+        if (existing.paymentStatus === 'success' && !isSuccess) {
+            console.log(`🛡️ IPN: ${tran_id} already succeeded, ignoring failed IPN`);
+            return;
+        }
+
         // ✅ Update the payment status
         const participant = await ExclusiveOfferParticipant.findOneAndUpdate(
             { transactionId: tran_id },
@@ -244,7 +311,7 @@ const ipn = async (req: any, res: any) => {
             },
             { new: true },
         );
-        
+
         if (!participant) {
             console.log(`❌ No participant found for ${tran_id}`);
             return;
@@ -252,31 +319,29 @@ const ipn = async (req: any, res: any) => {
         
         
         
-        // ✅ If success, add job to queue for Google Sheets
-        if (isSuccess) {
-            // Get batch info
-            let batchNo = 'N/A';
-            if (participant.batchId) {
-                const batch = await ExclusiveBatch.findById(participant.batchId);
-                if (batch) {
-                    batchNo = batch.batchNo?.toString() || 'N/A';
-                }
+        // ✅ Add job to queue for Google Sheets (success + failed go to separate tabs)
+        // Get batch info
+        let batchNo = 'N/A';
+        if (participant.batchId) {
+            const batch = await ExclusiveBatch.findById(participant.batchId);
+            if (batch) {
+                batchNo = batch.batchNo?.toString() || 'N/A';
             }
-            
-            await exclusiveOfferService.addToQueue({
-                name: participant.name,
-                phone: participant.phone,
-                whatsapp: participant.whatsapp || '',
-                email: participant.email || '',
-                occupation: participant.occupation || '',
-                courseTitle: 'Voice & Public Speaking Masterclass',
-                offerPrice: participant.price || 199,
-                transactionId: tran_id,
-                paymentStatus: 'success',
-                batchId: participant.batchId,
-                batchNo: batchNo,
-            });
         }
+
+        await exclusiveOfferService.addToQueue({
+            name: participant.name,
+            phone: participant.phone,
+            whatsapp: participant.whatsapp || '',
+            email: participant.email || '',
+            occupation: participant.occupation || '',
+            courseTitle: 'Voice & Public Speaking Masterclass',
+            offerPrice: participant.price || 299,
+            transactionId: tran_id,
+            paymentStatus: isSuccess ? 'success' : 'failed',
+            batchId: participant.batchId,
+            batchNo: batchNo,
+        });
     } catch (e: any) {
         console.error('❌ IPN error:', e.message);
         console.error('Stack:', e.stack);
@@ -385,7 +450,7 @@ const createParticipant = catchAsync(async (req, res) => {
         phone: req.body.phone,
         whatsapp: req.body.whatsapp || '',
         occupation: req.body.occupation || '',
-        price: req.body.price || 199,
+        price: req.body.price || 299,
         transactionId: req.body.transactionId || undefined,
         visitorId: req.body.visitorId || '',
         batchId: req.body.batchId || null,

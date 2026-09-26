@@ -17,6 +17,19 @@ const exclusiveOfferWorker = new bullmq_1.Worker('exclusive-offer-queue', async 
     logger_1.default.info({ jobId: job.id }, '🔁 Worker started for job');
     const { participantData } = job.data;
     logger_1.default.info(participantData, '📦 Received participantData');
+    const incomingStatus = (participantData.paymentStatus || 'success').toLowerCase();
+    const isIncomingFailed = incomingStatus === 'failed' || incomingStatus === 'cancelled';
+    // 🛡️ Success is terminal — a late failed job must not downgrade a paid customer
+    // or write them into the Failed sheet.
+    if (isIncomingFailed && participantData.transactionId) {
+        const existing = await exclusive_offer_model_1.ExclusiveOfferParticipant.findOne({ transactionId: participantData.transactionId })
+            .select('paymentStatus')
+            .lean();
+        if (existing?.paymentStatus === 'success') {
+            logger_1.default.warn({ transactionId: participantData.transactionId }, '🛡️ Skipping failed-sheet sync: transaction already succeeded');
+            return existing;
+        }
+    }
     const cleanPhone = (0, phoneSanitizer_1.sanitizePhoneNumber)(participantData.phone) || participantData.phone;
     const session = await mongoose_1.default.startSession();
     try {
@@ -110,7 +123,7 @@ const exclusiveOfferWorker = new bullmq_1.Worker('exclusive-offer-queue', async 
         }
         logger_1.default.info(`📋 Final batch: ${batchNo} - ${batchTitle}`);
         // ============================
-        // GOOGLE SHEET - CREATE NEW SHEET
+        // GOOGLE SHEET - SUCCESS vs FAILED (separate tabs)
         // ============================
         const registrationDate = new Date().toLocaleString('en-BD', {
             timeZone: 'Asia/Dhaka',
@@ -121,9 +134,19 @@ const exclusiveOfferWorker = new bullmq_1.Worker('exclusive-offer-queue', async 
             minute: '2-digit',
             hour12: true,
         });
-        // ✅ Sheet name with batch number
-        const sheetTitle = `Exclusive Offer Course Batch: ${batchNo}`;
-        logger_1.default.info(`📤 Creating/Updating Google Sheet: ${sheetTitle}`);
+        const rawStatus = (participantData.paymentStatus || participant?.paymentStatus || 'pending').toLowerCase();
+        const isSuccess = rawStatus === 'success';
+        const isFailed = rawStatus === 'failed' || rawStatus === 'cancelled';
+        // ⏭️ Don't sync pending payments to any sheet
+        if (!isSuccess && !isFailed) {
+            logger_1.default.info({ transactionId: participantData.transactionId, paymentStatus: rawStatus }, '⏭️ Skipping Google Sheet append (payment pending)');
+            return participant;
+        }
+        // ✅ Separate tabs: success and failed never mix
+        const sheetTitle = isSuccess
+            ? `Exclusive Offer Course Batch: ${batchNo}`
+            : `Exclusive Offer Course Batch: ${batchNo} - Failed`;
+        logger_1.default.info(`📤 Creating/Updating Google Sheet: ${sheetTitle} (status=${rawStatus})`);
         const headers = [
             'Name',
             'Phone',
@@ -144,22 +167,17 @@ const exclusiveOfferWorker = new bullmq_1.Worker('exclusive-offer-queue', async 
             participant.email || participantData.email || '',
             participant.occupation || participantData.occupation || '',
             participant.courseTitle || batchTitle || 'Voice & Public Speaking Masterclass',
-            String(participant.offerPrice || participantData.offerPrice || 199),
+            String(participant.offerPrice || participantData.offerPrice || 299),
             participantData.transactionId || '',
-            participantData.paymentStatus || 'success',
+            rawStatus,
             registrationDate,
             participantData.addedByAdmin ? 'Yes' : 'No',
         ];
-        // ✅ Only sync to Google Sheets if payment is successful
-        const paymentStatus = participantData.paymentStatus || 'pending';
-        if (paymentStatus !== 'success') {
-            logger_1.default.info({ transactionId: participantData.transactionId, paymentStatus }, '⏭️ Skipping Google Sheet append (payment not successful)');
-            return participant;
-        }
-        // ✅ Check if already synced
-        const claim = await exclusive_offer_model_1.ExclusiveOfferParticipant.updateOne({ transactionId: participantData.transactionId, sheetSynced: { $ne: true } }, { $set: { sheetSynced: true } });
+        // ✅ Per-status idempotency flag so success + failed sync independently
+        const syncField = isSuccess ? 'sheetSynced' : 'failedSheetSynced';
+        const claim = await exclusive_offer_model_1.ExclusiveOfferParticipant.updateOne({ transactionId: participantData.transactionId, [syncField]: { $ne: true } }, { $set: { [syncField]: true } });
         if (claim.modifiedCount === 0) {
-            logger_1.default.info({ transactionId: participantData.transactionId }, '⏭️ Skipping Google Sheet append (already synced)');
+            logger_1.default.info({ transactionId: participantData.transactionId, status: rawStatus }, `⏭️ Skipping Google Sheet append (already synced to ${sheetTitle})`);
             return participant;
         }
         try {
@@ -173,7 +191,7 @@ const exclusiveOfferWorker = new bullmq_1.Worker('exclusive-offer-queue', async 
         }
         catch (error) {
             logger_1.default.error({ error: error?.message || error }, '❌ Failed to append to sheet');
-            await exclusive_offer_model_1.ExclusiveOfferParticipant.updateOne({ transactionId: participantData.transactionId }, { $set: { sheetSynced: false } }).catch(() => undefined);
+            await exclusive_offer_model_1.ExclusiveOfferParticipant.updateOne({ transactionId: participantData.transactionId }, { $set: { [syncField]: false } }).catch(() => undefined);
             throw error;
         }
         return participant;

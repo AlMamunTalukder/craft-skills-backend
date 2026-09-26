@@ -14,7 +14,7 @@ const registerParticipant = async (payload: any) => {
     try {
         // 1. Get price from settings
         const settings = await ExclusiveBatch.findById(payload.batchId);
-        const price = settings?.offerPrice || 199;
+        const price = settings?.offerPrice || 299;
 
         // 2. Sanitize phone
         const cleanPhone = sanitizePhoneNumber(payload.phone) || payload.phone;
@@ -140,7 +140,7 @@ const sendToGoogleSheets = async (participant: any) => {
         email: participant.email || '',
         occupation: participant.occupation || '',
         courseTitle: 'Voice & Public Speaking Masterclass',
-        offerPrice: participant.price || 199,
+        offerPrice: participant.price || 299,
         transactionId: participant.transactionId,
         paymentStatus: participant.paymentStatus || 'success',
         batchId: participant.batchId,
@@ -150,18 +150,21 @@ const sendToGoogleSheets = async (participant: any) => {
 };
 
 // ✅ Add job to queue for background processing
-// Deduplicated by transactionId so IPN + payment-success cannot enqueue twice.
+// Deduplicated by transactionId + status so IPN + payment-success cannot
+// enqueue twice, but success and failed are tracked independently
+// (separate sheets).
 const addToQueue = async (participantData: any) => {
     const tranId = participantData?.transactionId;
+    const status = (participantData?.paymentStatus || 'success').toLowerCase();
     if (tranId && redisClient?.isReady) {
         try {
-            const dedupeKey = `exclusive:sheet-enqueued:${tranId}`;
+            const dedupeKey = `exclusive:sheet-enqueued:${tranId}:${status}`;
             const claimed = await redisClient.set(dedupeKey, '1', {
                 NX: true,
                 EX: 48 * 60 * 60, // 48h — payments can't be revalidated beyond this
             });
             if (claimed !== 'OK') {
-                console.log(`⏭️ Skipping duplicate queue add for ${tranId}`);
+                console.log(`⏭️ Skipping duplicate queue add for ${tranId}:${status}`);
                 return;
             }
         } catch (e) {

@@ -7,7 +7,7 @@ export interface IExclusiveOfferParticipant extends Document {
     whatsapp?: string;
     occupation?: string;
     price?: number;
-    paymentStatus?: 'pending' | 'success' | 'failed';
+    paymentStatus?: 'pending' | 'success' | 'failed' | 'cancelled';
     paymentMethod?: string;
     transactionId?: string;
     sslValidationId?: string;
@@ -15,6 +15,7 @@ export interface IExclusiveOfferParticipant extends Document {
     visitorId?: string;
     batchId?: Types.ObjectId; // ✅ ADD THIS
     sheetSynced?: boolean; // ✅ True once the Google Sheet append has completed
+    failedSheetSynced?: boolean; // ✅ True once the Failed sheet append has completed
     createdAt: Date;
     updatedAt: Date;
 }
