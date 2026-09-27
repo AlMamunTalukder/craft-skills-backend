@@ -3,7 +3,7 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.appendDataToGoogleSheet = void 0;
+exports.deleteRowsByColumnValue = exports.appendDataToGoogleSheet = void 0;
 const googleapis_1 = require("googleapis");
 const config_1 = __importDefault(require("../config"));
 const logger_1 = __importDefault(require("../shared/logger"));
@@ -96,3 +96,63 @@ const appendDataToGoogleSheet = async (tabTitle, headers, values, options) => {
     }
 };
 exports.appendDataToGoogleSheet = appendDataToGoogleSheet;
+// Normalize a phone for matching: Bengali digits → English, digits only,
+// then last 10 digits (8801712345678 and 01712345678 both → 1712345678).
+const normalizePhoneForMatch = (input) => {
+    const banglaToEnglish = {
+        '০': '0', '১': '1', '২': '2', '৩': '3', '৪': '4',
+        '৫': '5', '৬': '6', '৭': '7', '৮': '8', '৯': '9',
+    };
+    const converted = String(input || '').replace(/[০-৯]/g, (d) => banglaToEnglish[d]);
+    const digits = converted.replace(/\D/g, '');
+    if (digits.length < 10)
+        return digits;
+    return digits.slice(-10);
+};
+// 🧹 Physical delete: remove every data row in `tabTitle` whose 1-based
+// `columnIndex` cell matches `matchValue` (phone-aware). Used to clean a
+// retry-success phone out of the Failed tab. Returns removed row count.
+const deleteRowsByColumnValue = async (tabTitle, columnIndex, matchValue) => {
+    const sanitizedTitle = sanitizeTabName(tabTitle);
+    const target = normalizePhoneForMatch(matchValue);
+    if (!target || target.length < 10) {
+        logger_1.default.warn(`deleteRowsByColumnValue: invalid match value for "${sanitizedTitle}"`);
+        return 0;
+    }
+    const meta = await sheets.spreadsheets.get({ spreadsheetId: SPREADSHEET_ID });
+    const sheet = meta.data.sheets?.find((s) => s.properties?.title === sanitizedTitle);
+    const sheetId = sheet?.properties?.sheetId;
+    if (sheetId == null) {
+        logger_1.default.info(`Tab "${sanitizedTitle}" not found, nothing to delete`);
+        return 0;
+    }
+    const col = columnToLetter(columnIndex);
+    const existing = await sheets.spreadsheets.values.get({
+        spreadsheetId: SPREADSHEET_ID,
+        range: `${sanitizedTitle}!${col}2:${col}`,
+    });
+    const rows = existing.data.values || [];
+    // 1-based row numbers (row 1 = header). Descending so deletes don't shift indices.
+    const rowsToDelete = rows
+        .map((r, i) => ({ row: i + 2, match: normalizePhoneForMatch(String(r?.[0] ?? '')) }))
+        .filter((r) => r.match === target)
+        .map((r) => r.row)
+        .sort((a, b) => b - a);
+    if (rowsToDelete.length === 0) {
+        logger_1.default.info(`No matching rows in "${sanitizedTitle}" for cleanup`);
+        return 0;
+    }
+    await sheets.spreadsheets.batchUpdate({
+        spreadsheetId: SPREADSHEET_ID,
+        requestBody: {
+            requests: rowsToDelete.map((row) => ({
+                deleteDimension: {
+                    range: { sheetId, dimension: 'ROWS', startIndex: row - 1, endIndex: row },
+                },
+            })),
+        },
+    });
+    logger_1.default.info(`Deleted ${rowsToDelete.length} row(s) from "${sanitizedTitle}"`);
+    return rowsToDelete.length;
+};
+exports.deleteRowsByColumnValue = deleteRowsByColumnValue;
