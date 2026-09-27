@@ -4,7 +4,7 @@ import mongoose from 'mongoose';
 import { redisConnection } from '../queues/connection';
 import logger from 'src/shared/logger';
 
-import { appendDataToGoogleSheet } from 'src/utils/googleSheets';
+import { appendDataToGoogleSheet, deleteRowsByColumnValue } from 'src/utils/googleSheets';
 import { sanitizePhoneNumber } from 'src/utils/phoneSanitizer';
 import { ExclusiveOfferParticipant } from 'src/modules/exclusive/exclusive-offer.model';
 import { ExclusiveBatch } from 'src/modules/exclusive/exclusive-batch.model';
@@ -242,10 +242,31 @@ const exclusiveOfferWorker = new Worker(
                 const transactionId = participantData.transactionId || '';
                 const useTransactionId = !!transactionId;
                 await appendDataToGoogleSheet(sheetTitle, headers, rowData, {
-                    dedupColumn: useTransactionId ? 7 : 1,
+                    // Columns are 1-based: H (Transaction ID) = 8, B (Phone) = 2
+                    dedupColumn: useTransactionId ? 8 : 2,
                     dedupValue: useTransactionId ? transactionId : cleanPhone,
                 });
                 logger.info(`✅ Google Sheet updated: ${sheetTitle}`);
+
+                // 🧹 Retry-recovered: success row is in — physically remove this
+                // phone's row(s) from the sibling Failed tab (non-fatal).
+                if (isSuccess && cleanPhone) {
+                    try {
+                        const failedTab = `Exclusive Offer Course Batch: ${batchNo} - Failed`;
+                        const removed = await deleteRowsByColumnValue(failedTab, 2, cleanPhone);
+                        if (removed > 0) {
+                            logger.info(
+                                { transactionId, removed },
+                                `🧹 Cleaned ${removed} failed-sheet row(s) after success`,
+                            );
+                        }
+                    } catch (cleanupError: any) {
+                        logger.warn(
+                            { error: cleanupError?.message || cleanupError },
+                            '⚠️ Failed-sheet cleanup skipped (non-fatal)',
+                        );
+                    }
+                }
             } catch (error: any) {
                 logger.error({ error: error?.message || error }, '❌ Failed to append to sheet');
                 await ExclusiveOfferParticipant.updateOne(

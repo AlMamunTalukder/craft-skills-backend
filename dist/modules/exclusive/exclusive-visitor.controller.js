@@ -6,6 +6,7 @@ Object.defineProperty(exports, "__esModule", { value: true });
 exports.markAsRegistered = exports.getVisitorStatus = exports.markVisitorRegistered = void 0;
 const crypto_1 = __importDefault(require("crypto"));
 const config_1 = __importDefault(require("../../config"));
+const exclusive_batch_model_1 = require("./exclusive-batch.model");
 const COOKIE_NAME = 'exclusive_visitor_id';
 const COOKIE_MAX_AGE = 365 * 24 * 60 * 60 * 1000; // 1 year
 const STAGES = [
@@ -20,6 +21,19 @@ for (const stage of STAGES) {
     totalDuration += stage.duration;
     STAGE_ENDS.push(totalDuration);
 }
+// Current active batch id (null when none). One cheap indexed lookup per call.
+const getActiveBatchId = async () => {
+    try {
+        const batch = (await exclusive_batch_model_1.ExclusiveBatch.findOne({ isActive: true })
+            .select('_id')
+            .lean());
+        const id = batch?._id;
+        return id?.toString?.() || null;
+    }
+    catch {
+        return null;
+    }
+};
 const COOKIE_OPTIONS = {
     maxAge: COOKIE_MAX_AGE,
     httpOnly: true,
@@ -63,7 +77,10 @@ const readCookie = (req) => {
             parsed.v > 0 &&
             parsed.v <= now + 5 * 60 * 1000 // sanity: no far-future timestamps
         ) {
-            return { v: parsed.v, r: parsed.r === true };
+            const data = { v: parsed.v, r: parsed.r === true };
+            if (typeof parsed?.b === 'string' && parsed.b.length > 0)
+                data.b = parsed.b;
+            return data;
         }
     }
     catch {
@@ -85,9 +102,17 @@ const getVisitorStatus = async (req, res) => {
     res.set('Cache-Control', 'no-store');
     try {
         const existing = readCookie(req);
-        const data = existing || { v: Date.now(), r: false };
-        if (!existing)
+        const activeBatchId = await getActiveBatchId();
+        let data;
+        if (!existing || (activeBatchId && existing.b !== activeBatchId)) {
+            // New visitor OR new batch → fresh 3 stages + fresh offer for everyone
+            // (old blocked/registered timers never stick at 00 across batches).
+            data = { v: Date.now(), r: false, b: activeBatchId || undefined };
             writeCookie(res, data);
+        }
+        else {
+            data = existing;
+        }
         // Already registered: hide the offer (matches previous behavior)
         if (data.r) {
             return res.json({

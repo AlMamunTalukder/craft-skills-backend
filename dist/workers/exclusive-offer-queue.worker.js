@@ -184,10 +184,25 @@ const exclusiveOfferWorker = new bullmq_1.Worker('exclusive-offer-queue', async 
             const transactionId = participantData.transactionId || '';
             const useTransactionId = !!transactionId;
             await (0, googleSheets_1.appendDataToGoogleSheet)(sheetTitle, headers, rowData, {
-                dedupColumn: useTransactionId ? 7 : 1,
+                // Columns are 1-based: H (Transaction ID) = 8, B (Phone) = 2
+                dedupColumn: useTransactionId ? 8 : 2,
                 dedupValue: useTransactionId ? transactionId : cleanPhone,
             });
             logger_1.default.info(`✅ Google Sheet updated: ${sheetTitle}`);
+            // 🧹 Retry-recovered: success row is in — physically remove this
+            // phone's row(s) from the sibling Failed tab (non-fatal).
+            if (isSuccess && cleanPhone) {
+                try {
+                    const failedTab = `Exclusive Offer Course Batch: ${batchNo} - Failed`;
+                    const removed = await (0, googleSheets_1.deleteRowsByColumnValue)(failedTab, 2, cleanPhone);
+                    if (removed > 0) {
+                        logger_1.default.info({ transactionId, removed }, `🧹 Cleaned ${removed} failed-sheet row(s) after success`);
+                    }
+                }
+                catch (cleanupError) {
+                    logger_1.default.warn({ error: cleanupError?.message || cleanupError }, '⚠️ Failed-sheet cleanup skipped (non-fatal)');
+                }
+            }
         }
         catch (error) {
             logger_1.default.error({ error: error?.message || error }, '❌ Failed to append to sheet');
